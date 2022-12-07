@@ -1,0 +1,3 @@
+[submodule "cal-char-corr"]
+	path = cal-char-corr
+	url = git@github.com:NTNU-SmallSat-Lab/cal-char-corr.git
