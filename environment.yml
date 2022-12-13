@@ -15,3 +15,5 @@ dependencies:
   - jupyterlab==3.5.1
   - scikit-image==0.19.3 
   - opencv==4.6.0
+  - spectral==0.23.1
+  - autopep8==2.0.0
