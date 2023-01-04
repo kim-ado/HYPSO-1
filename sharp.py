@@ -93,10 +93,10 @@ class sharp:
         self.brisque["initial"] = bq.scoreCube(self.initial_cube)
 
         if self.refrence_cube is not None:
-            self.brisque["refrence"] = bq.scoreCube(self.initial_cube)
+            self.brisque["refrence"] = bq.scoreCube(self.refrence_cube)
 
         if self.sharpened_cube is not None:
-            self.brisque["sharpend"] = bq.scoreCube(self.initial_cube)
+            self.brisque["sharpend"] = bq.scoreCube(self.sharpened_cube)
 
         return self.brisque
 
@@ -146,7 +146,7 @@ class sharp:
             self.brisque = self.get_brisque()
         else:
             self.brisque = self.get_brisque()
-            self.sam = self.get_sam()
+            #self.sam = self.get_sam()
 
 
 def sam(image: np.ndarray, refrence_image: np.ndarray) -> np.ndarray:

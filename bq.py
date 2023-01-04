@@ -76,7 +76,7 @@ def plotAllScores(wavelengths: np.ndarray, ScoreMatrix: np.ndarray, titles: list
         hovermode="x"
     )
 
-    fig.show()
+    # fig.show()
     return fig
 
 
@@ -154,7 +154,7 @@ def plotScoreStatistics(wavelengths: np.ndarray,
         hovermode="x"
     )
 
-    fig.show()
+    # fig.show()
     return fig
 
 
