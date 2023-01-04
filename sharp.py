@@ -1,10 +1,6 @@
-import os
-
-import matplotlib.pyplot as plt
 import numpy as np
 import spectral.io.envi as envi
 
-import bq
 import h1data
 
 
@@ -22,12 +18,23 @@ class sharp:
         # metrics - full refrence
         self.sam = {}
 
-    def sharpen_cs(self):
-        """Sharpen the cube using component substitution method."""
-        self.sharpened_cube = component_subtitution(
-            self.initial_cube, self.sharpest_band_index)
+        self.name = "sharp"
 
-    @classmethod
+    def set_name(self, name: str):
+        self.name = name
+
+    def sharpen(self, method: str = "cs") -> None:
+        """Sharpen the cube method. The method is set by the method argument.
+        """
+        if method == "cs":
+            self.sharpened_cube = component_subtitution(
+                self.initial_cube, self.sharpest_band_index)
+        else:
+            errmsg = "Method not supported."
+            errmsg += "\n - Supported methods are: 'cs'"
+            raise ValueError(errmsg)
+
+    @ classmethod
     def fromh1data(cls, h1data: h1data):
         """Create a sharp object from a h1data object.
 
@@ -48,12 +55,12 @@ class sharp:
             sharp_obj.initial_cube = h1data.l1a_cube
 
         # Initialise the sharpest band index to the middle band
-        sharp_obj.sharpest_band_index = np.shape(
-            sharp_obj.initial_cube)[2] // 2
+
+        sharp_obj.sharpest_band_index = h1data.center_wavelength
 
         return sharp_obj
 
-    @classmethod
+    @ classmethod
     def fromenvifile(cls, headerfile_path: str, datafile_path: str = None):
         """Create a sharp object from a envi file.
 
@@ -81,6 +88,7 @@ class sharp:
         return sharp_obj
 
     def get_brisque(self) -> np.ndarray:
+        import bq
 
         self.brisque["initial"] = bq.scoreCube(self.initial_cube)
 
@@ -100,6 +108,18 @@ class sharp:
         """
         self.sam = sam(self.initial_cube, self.refrence_cube)
         return self.sam
+
+    def set_sharpest_band_index(self, band_index: int) -> int:
+        """Set the sharpest band index.
+
+        Args:
+            band_index (int): The band index.
+
+        Returns:
+            int: The band index.
+        """
+        self.sharpest_band_index = band_index
+        return self.sharpest_band_index
 
     def load_refrence_cube(self, refrence_cube: np.ndarray) -> np.ndarray:
         """Load a refrence cube.
@@ -152,27 +172,51 @@ def sam(image: np.ndarray, refrence_image: np.ndarray) -> np.ndarray:
 
 
 def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) -> np.ndarray:
-    """Perform component substitution on an image.
+    """Perform component substitution on an image cube.
 
     Args:
-        image (np.ndarray): The image to be sharpened.
-        sharpest_band_index (int, optional): The sharpest band. Defaults to None.
+        image (np.ndarray) [NxMxL]: The image cube to be sharpened.
+                                        N = first spatial dimension
+                                        M = second spatial dimension
+                                        L = number of bands
+
+        sharpest_band_index (int, optional): The sharpest band. Defaults to center band.
 
     Returns:
-        np.ndarray: The sharpened image.
+        np.ndarray: The sharpened image cube.
     """
+    from numpy.linalg import svd
+    from skimage.exposure import match_histograms
+
     if sharpest_band_index is None:
         sharpest_band_index = image.shape[2] // 2
 
-    # TODO: do PCA on image
-    # TODO: histogram match first PCA component to the sharpest band
-    # TODO: replace first component with the sharpest band
+    # Do PCA on image
+    # inspo: https://stats.stackexchange.com/questions/134282/relationship-between-svd-and-pca-how-to-use-svd-to-perform-pca
+    # Reshape image to 2D array with each row representing samples
+    img_variable_form = np.reshape(
+        image, (image.shape[0] * image.shape[1], image.shape[2]))
+    U, S, Vh = svd(img_variable_form, full_matrices=False)
+    principal_components = np.dot(U, np.diag(S))
+    component_cube = np.reshape(
+        principal_components, (image.shape[0], image.shape[1], image.shape[2]))
 
-    sharpened_image = np.zeros(image.shape)
-    for i in range(image.shape[2]):
-        sharpened_image[:, :, i] = image[:, :, sharpest_band_index]
+    # Match histogram of sharpest band to first component
+    matched_sharpest_band = match_histograms(
+        image[:, :, sharpest_band_index], component_cube[:, :, 0])
 
-    return sharpened_image
+    # Replace first component with matched sharpest band
+    fixed_component_cube = component_cube
+    fixed_component_cube[:, :, 0] = matched_sharpest_band
+    fixed_cc_variable_form = np.reshape(
+        fixed_component_cube, (image.shape[0] * image.shape[1], image.shape[2]))
+
+    # Do inverse PCA
+    sharpend_variable_form = np.dot(fixed_cc_variable_form, Vh)
+    sharpend_cube = np.reshape(
+        sharpend_variable_form, (image.shape[0], image.shape[1], image.shape[2]))
+
+    return sharpend_cube
 
 
 def main():

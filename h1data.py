@@ -1,10 +1,10 @@
+import bq
+import spectral.io.envi as envi
+import plotly.express as px
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
-import spectral.io.envi as envi
-
-import bq
+# import spectral.io.envi as envi # add support for reading envi files later
 
 
 class h1data:
@@ -19,22 +19,27 @@ class h1data:
 
 
         """
-        # get the metadata to be used in the class
+        # Get the metadata to be used in the class
         self.info = self.get_metainfo(top_folder_name)
         self.raw_cube = self.get_raw_cube()  # consider initializing with None
 
-        # set the radiometric and spectral coefficients
+        # Set the radiometric and spectral coefficients
         self.rad_file = "rad_coeffs_FM_binx9_2022_08_06_Finnmark_recal_a.csv"
         self.radiometric_coefficients = self.set_radiometric_coefficients(
             path=None)
 
-        # set the spectral coefficients
+        # Set the spectral coefficients
         self.spec_file = "spectral_bands_HYPSO-1_120bands.csv"
         self.spec_coefficients = self.set_spectral_coefficients(path=None)
 
         # Calibrate the raw data
         self.wavelengths = self.spec_coefficients
         self.l1a_cube = self.calibrate_cube()  # consider initializing with None
+
+        # Set the center wavelength
+        # found empirically using the brisque metric
+        self.center_wavelength = np.argmin(
+            np.abs(self.spec_coefficients-553))
 
     def get_metainfo(self, top_folder_name: str) -> dict:
         """Get the metadata from the top folder of the data.
@@ -227,8 +232,10 @@ class h1data:
 
     def show_raw_cube(self) -> None:
         """Show the raw data cube."""
-        plt.imshow(np.rot90(self.raw_cube[:, ::10, 20]), aspect=3)
+        obj = px.imshow(np.rot90(self.raw_cube[:, :, 47]), aspect=4.5)
+        obj.show()
 
     def show_l1a_cube(self) -> None:
         """Show the l1a cube."""
-        plt.imshow(np.rot90(self.l1a_cube[:, ::10, 20]), aspect=3)
+        obj = px.imshow(np.rot90(self.l1a_cube[:, :, 47]), aspect=4.5)
+        obj.show()
