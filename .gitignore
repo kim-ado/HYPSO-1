@@ -6,3 +6,4 @@ data/
 *.pdf
 # Ignore all compiled python files
 *.pyc
+*.pkl
