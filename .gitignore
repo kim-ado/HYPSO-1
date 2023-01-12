@@ -9,3 +9,4 @@ data/
 *.pkl
 *.png
 */powerpoint/*
+*.DS_Store
