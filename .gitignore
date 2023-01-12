@@ -7,3 +7,5 @@ data/
 # Ignore all compiled python files
 *.pyc
 *.pkl
+*.png
+*/powerpoint/*
