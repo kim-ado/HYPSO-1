@@ -1,5 +1,3 @@
-import bq
-import spectral.io.envi as envi
 import plotly.express as px
 import os
 
@@ -226,7 +224,7 @@ class h1data:
             cube_calibrated[i, :, :] = frame_calibrated
 
         self.l1a_cube = cube_calibrated
-        #self.wavelengths = self.spec_coefficients
+        # self.wavelengths = self.spec_coefficients
 
         return cube_calibrated
 
@@ -239,3 +237,109 @@ class h1data:
         """Show the l1a cube."""
         obj = px.imshow(np.rot90(self.l1a_cube[:, :, 47]), aspect=4.5)
         obj.show()
+
+    def write_geojson(self, fname: str, create_folder: bool = False, writingmode: str = "w") -> None:
+        import shutil
+        import json
+        """Write the geojson file to the given path.
+
+        Args:
+            path (str): The path to write the geojson file.
+        """
+
+        # check if folder exists
+        metadatapath = "geojsonimgs"
+        if not os.path.exists(metadatapath):
+            os.mkdir(metadatapath)
+
+        # convert dictionary to json
+        geojsondict = {}
+
+        geojsondict["type"] = "point"
+
+        pos_file = ""
+        foldername = os.path.join("data", self.info["folder_name"])
+        for file in os.listdir(foldername):
+            if file.endswith("geometric-meta-info.txt"):
+                pos_file = os.path.join(foldername, file)
+                break
+
+        if pos_file == "":
+            raise ValueError(f"Could not find position file in {foldername}")
+
+        with open(pos_file, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if "lat lon" in line:
+                    lat = float(line.split("lat lon")[1].split(" ")[1])
+                    lon = float(line.split("lat lon")[1].split(" ")[2])
+                    break
+
+        geojsondict["coordinates"] = [lat, lon]
+        geojsondict["properties"] = {}
+
+        name = self.info["folder_name"].split("CaptureDL_")[-1].split("_")[0]
+        geojsondict["properties"]["name"] = name
+
+        date = self.info["folder_name"].split(
+            "CaptureDL_")[-1].split("20")[1].split("T")[0]
+        date = f"20{date}"
+
+        time = self.info["folder_name"].split(
+            "CaptureDL_")[-1].split("20")[1].split("T")[-1]
+
+        geojsondict["properties"]["date"] = date
+        geojsondict["properties"]["time"] = time
+        geojsondict["properties"]["frames"] = self.info["frame_count"]
+        geojsondict["properties"]["lines"] = self.info["image_height"]
+        geojsondict["properties"]["bands"] = self.info["image_width"]
+        geojsondict["properties"]["satellite"] = "HYPSO-1"
+
+        img_file = ""
+        foldername = os.path.join("data", self.info["folder_name"])
+        for file in os.listdir(foldername):
+            if file.endswith("geometric-meta-info.txt"):
+                img_file = os.path.join(foldername, file)
+                break
+
+        # copy img_file to metadatapath
+        dst_png = f"{name}_{date}_{time}.png"
+        dst_json = f"{name}_{date}_{time}.geojson"
+        shutil.copyfile(img_file, os.path.join(
+            metadatapath, dst_png))
+
+        geojsondict["properties"]["datalink"] = os.path.join(
+            metadatapath, dst_png)
+
+        dst_json = os.path.join(metadatapath, dst_json)
+        with open(dst_json, writingmode) as f:
+            json.dump(geojsondict, f, indent=4)
+
+
+def get_rgb_matrix(cube: h1data, equalized: bool = False) -> np.ndarray:
+    """Get the RGB matrix from the cube.
+
+    Args:
+        cube (h1data): The cube.
+        gamma (float, optional): The gamma value. Defaults to 0.
+
+    Returns:
+        np.ndarray: The RGB matrix.
+    """
+    from skimage import exposure
+
+    wl = cube.wavelengths
+    R_ind = np.argmin(abs(wl-600))
+    G_ind = np.argmin(abs(wl-553))
+    B_ind = np.argmin(abs(wl-500))
+
+    rgb_matrix = cube.l1a_cube[:, :, [R_ind, G_ind, B_ind]]
+
+    if equalized:
+        def normalize(arr):
+            arr = arr - np.min(arr)
+            return arr / np.max(arr)
+
+        rgb_matrix = exposure.equalize_adapthist(normalize(rgb_matrix))
+
+    return rgb_matrix
