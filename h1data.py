@@ -238,13 +238,16 @@ class h1data:
         obj = px.imshow(np.rot90(self.l1a_cube[:, :, 47]), aspect=4.5)
         obj.show()
 
-    def write_geojson(self, fname: str, create_folder: bool = False, writingmode: str = "w") -> None:
+    def write_geojson(self) -> None:
         import shutil
         import json
-        """Write the geojson file to the given path.
-
+        """Write the geojson metadata file.
+        
         Args:
-            path (str): The path to write the geojson file.
+            writingmode (str, optional): The writing mode. Defaults to "w".
+
+        Raises:
+            ValueError: If the position file could not be found.            
         """
 
         # check if folder exists
@@ -255,7 +258,7 @@ class h1data:
         # convert dictionary to json
         geojsondict = {}
 
-        geojsondict["type"] = "point"
+        geojsondict["type"] = "Feature"
 
         pos_file = ""
         foldername = os.path.join("data", self.info["folder_name"])
@@ -275,12 +278,15 @@ class h1data:
                     lon = float(line.split("lat lon")[1].split(" ")[2])
                     break
 
-        geojsondict["coordinates"] = [lat, lon]
-        geojsondict["properties"] = {}
+        geojsondict["geometry"] = {}
+        geojsondict["geometry"]["type"] = "Point"
+        geojsondict["geometry"]["coordinates"] = [lon, lat]
 
+        geojsondict["properties"] = {}
         name = self.info["folder_name"].split("CaptureDL_")[-1].split("_")[0]
         geojsondict["properties"]["name"] = name
 
+        geojsondict["metadata"] = {}
         date = self.info["folder_name"].split(
             "CaptureDL_")[-1].split("20")[1].split("T")[0]
         date = f"20{date}"
@@ -288,32 +294,60 @@ class h1data:
         time = self.info["folder_name"].split(
             "CaptureDL_")[-1].split("20")[1].split("T")[-1]
 
-        geojsondict["properties"]["date"] = date
-        geojsondict["properties"]["time"] = time
-        geojsondict["properties"]["frames"] = self.info["frame_count"]
-        geojsondict["properties"]["lines"] = self.info["image_height"]
-        geojsondict["properties"]["bands"] = self.info["image_width"]
-        geojsondict["properties"]["satellite"] = "HYPSO-1"
+        geojsondict["metadata"]["date"] = date
+        geojsondict["metadata"]["time"] = time
+        geojsondict["metadata"]["frames"] = self.info["frame_count"]
+        geojsondict["metadata"]["lines"] = self.info["image_height"]
+        geojsondict["metadata"]["bands"] = self.info["image_width"]
+        geojsondict["metadata"]["satellite"] = "HYPSO-1"
 
         img_file = ""
         foldername = os.path.join("data", self.info["folder_name"])
         for file in os.listdir(foldername):
-            if file.endswith("geometric-meta-info.txt"):
+            if file.endswith("bin3.png"):
+                # get path to png
                 img_file = os.path.join(foldername, file)
                 break
 
         # copy img_file to metadatapath
         dst_png = f"{name}_{date}_{time}.png"
         dst_json = f"{name}_{date}_{time}.geojson"
-        shutil.copyfile(img_file, os.path.join(
+        shutil.copy(img_file, os.path.join(
             metadatapath, dst_png))
 
         geojsondict["properties"]["datalink"] = os.path.join(
             metadatapath, dst_png)
 
         dst_json = os.path.join(metadatapath, dst_json)
-        with open(dst_json, writingmode) as f:
+        with open(dst_json, "w") as f:
             json.dump(geojsondict, f, indent=4)
+
+    # def write_netcdf4file(self, dst: str = ""):
+    #     """Write the netcdf4 file.
+
+    #     Args:
+    #         dst (str, optional): The destination. Defaults to "".
+    #     """
+    #     import xarray as xr
+
+    #     if dst == "":
+    #         dst = os.path.join("data", self.info["folder_name"], "l1a.nc")
+
+    #     # create dataset
+    #     ds = xr.Dataset(
+    #         {
+    #             "l1a_cube": (["frame", "line", "band"], self.l1a_cube),
+    #             "wavelengths": (["band"], self.wavelengths)
+    #         },
+    #         coords={
+    #             "frame": np.arange(self.info["frame_count"]),
+    #             "line": np.arange(self.info["image_height"]),
+    #             "band": np.arange(self.info["image_width"]),
+    #         },
+    #     )
+
+    #     # write to file
+    #     ds.to_netcdf(dst)
 
 
 def get_rgb_matrix(cube: h1data, equalized: bool = False) -> np.ndarray:
