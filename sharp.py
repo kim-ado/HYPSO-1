@@ -149,26 +149,36 @@ class sharp:
             #self.sam = self.get_sam()
 
 
-def sam(image: np.ndarray, refrence_image: np.ndarray) -> np.ndarray:
+def sam(image: np.ndarray, refrence_image: np.ndarray, return_image: bool = False) -> np.ndarray:
     """Calculate the spectral angle (SAM) metric.
 
     Args:
         image (np.ndarray): The image to be evaluated.
         refrence_image (np.ndarray): The refrence image.
+        return_image (bool, optional): Return the sam image. Defaults to False.
 
     Returns:
         np.ndarray: The sam metric for each wavelength.
+
     """
     # check if image and refrence_image have same shape
     if image.shape != refrence_image.shape:
         raise ValueError("image and refrence_image must have same shape")
 
-    sam_metric = np.zeros(image.shape[2])
-    for i in range(image.shape[2]):
-        # TODO: add sam score for each wavelength
-        sam_metric[i] = np.mean((image[:, :, i]) + refrence_image[:, :, i])
+    sam_image = np.zeros([image.shape[0], image.shape[1]])
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):
+            vector_img = image[x, y, :].flatten()
+            vector_ref = refrence_image[x, y, :].flatten()
 
-    return sam_metric
+            angle = np.arccos(np.dot(vector_img, vector_ref) / (np.linalg.norm(vector_img) * np.linalg.norm(vector_ref)))
+            sam_image[x,y] = angle
+        
+    avg_sam = np.mean(sam_image)
+    if return_image:
+        return avg_sam, sam_image
+    else:
+        return avg_sam
 
 def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) -> np.ndarray:
     """Perform component substitution on an image cube.
@@ -259,7 +269,8 @@ class SharpeningAlg:
     def __init__(self, type: str,
                  mother_wavelet: str = None,
                  wavelet_level: int = None,
-                 strategy: str = None,):
+                 strategy: str = None,
+                 kernel_size: int = None,):
 
         self.type = type
 
@@ -288,6 +299,14 @@ class SharpeningAlg:
                 raise ValueError(
                     f"strategy: {strategy}, must be one of the following: {valid_strategies}")
             return strategy
+        
+        def check_kernel_size(kernel_size):
+            if kernel_size is None:
+                raise ValueError("kernel_size must be specified")
+            elif kernel_size % 2 == 0:
+                raise ValueError("kernel_size must be an odd integer")
+            else:
+                return kernel_size
 
         if type == "wavelet":
             self.mother_wavelet = check_wavelet(mother_wavelet)
@@ -295,6 +314,7 @@ class SharpeningAlg:
             self.strategy = check_strategy(strategy)
         elif type == "laplacian":
             self.strategy = check_strategy(strategy)
+            self.kernel_size = check_kernel_size(kernel_size)
         elif type == "cs":
             pass
         elif type == "none":
@@ -340,7 +360,7 @@ class SharpeningAlg:
     def laplacian_cube_sharpen(self, cube: np.ndarray, sbi: int) -> np.ndarray:
         sharpened_cube = np.zeros(cube.shape)
         if self.strategy == "regular":
-            sharpened_cube = laplacian_cube_sharpen_regular(cube, sbi)
+            sharpened_cube = laplacian_cube_sharpen_regular(cube, sbi, self.kernel_size)
         elif self.strategy == "ladder":
             sharpened_cube = cube
         return sharpened_cube
@@ -363,11 +383,10 @@ def wavelet_cube_sharpen_regular(cube: np.ndarray, sbi: int, mother_wavelet: str
         np.ndarray: The sharpened cube.
     """
     sharpened_cube = np.zeros(cube.shape)
-
-    for i in range(cube.shape[0]):
-        sharpened_cube[i] = wavelet_sharpen(
-            cube[i], cube[sbi], mother_wavelet, wavelet_level)
-    
+    for i in range(cube.shape[2]):
+        sharpened_cube[:,:,i] = wavelet_sharpen(
+            cube[:,:,i], cube[:,:,sbi], mother_wavelet, wavelet_level)
+            
     return sharpened_cube
 
 def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
@@ -404,6 +423,7 @@ def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, kernel_size: int 
 
     sharpened_cube = np.zeros(cube.shape)
     kernel = np.array([[0, -1, 0], [-1, kernel_size, -1], [0, -1, 0]])
+    # TODO: Still have not got the laplacian sharpening to work properly
     for i in range(cube.shape[2]):
         sharpened_ref = cv2.filter2D(cube[:,:,sbi], -1, kernel)
         sharpened_cube[:,:,i] = sharpened_ref
