@@ -170,7 +170,6 @@ def sam(image: np.ndarray, refrence_image: np.ndarray) -> np.ndarray:
 
     return sam_metric
 
-
 def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) -> np.ndarray:
     """Perform component substitution on an image cube.
 
@@ -218,11 +217,195 @@ def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) ->
 
     return sharpend_cube
 
+def wavelet_sharpen(base_image: np.ndarray,
+                    reference_image: np.ndarray,
+                    wavelet: str = "db1",
+                    level: int = 1,
+                    provide_coeffs: bool = False
+                    ) -> np.ndarray:
+    """Perform wavelet sharpening on a single image using a reference image and a wavelet transform.
 
-def main():
-    print("Hello World")
-    return
+    Args:
+        base_image (np.ndarray): The base image.
+        reference_image (np.ndarray): The reference image.
+        wavelet (str, optional): The wavelet to use. Defaults to "db1".
+        level (int, optional): The level of the wavelet transform. Defaults to 1.
+        provide_coeffs (bool, optional): Whether to return the wavelet coefficients. Defaults to False.
 
+    Returns:
+        np.ndarray: The sharpened image.
+    """
+    import pywt
 
-if __name__ == "__main__":
-    main()
+    # Perform wavelet transform on base image
+    base_coeffs = pywt.wavedec2(base_image, wavelet, level=level)
+
+    # Perform wavelet transform on reference image
+    reference_coeffs = pywt.wavedec2(reference_image, wavelet, level=level)
+
+    # Replace base image coefficients with reference image coefficients
+    sharpened_coeffs = reference_coeffs
+    sharpened_coeffs[0] = base_coeffs[0]
+    
+    # Perform inverse wavelet transform
+    sharpened_image = pywt.waverec2(base_coeffs, wavelet)
+
+    if provide_coeffs:
+        return sharpened_image, base_coeffs, reference_coeffs
+    else:
+        return sharpened_image
+
+class SharpeningAlg:
+    def __init__(self, type: str,
+                 mother_wavelet: str = None,
+                 wavelet_level: int = None,
+                 strategy: str = None,):
+
+        self.type = type
+
+        def check_wavelet(mother_wavelet):
+            if mother_wavelet is None:
+                raise ValueError("mother_wavelet must be specified")
+            else:
+                return mother_wavelet
+
+        def check_wavelet_level(wavelet_level):
+            if wavelet_level is None or wavelet_level <= 0:
+                raise ValueError(
+                    "wavelet_level must be specified as a positive integer")
+            else:
+                return wavelet_level
+
+        def check_strategy(strategy):
+            valid_strategies = [
+                "regular", 
+                "ladder"
+                ]
+            strategy = strategy.lower()
+            if strategy is None and (type == "wavelet" or  type == "laplacian"):
+                raise ValueError(f"strategy must be specified for type {type}")
+            elif strategy not in valid_strategies:
+                raise ValueError(
+                    f"strategy: {strategy}, must be one of the following: {valid_strategies}")
+            return strategy
+
+        if type == "wavelet":
+            self.mother_wavelet = check_wavelet(mother_wavelet)
+            self.wavelet_level = check_wavelet_level(wavelet_level)
+            self.strategy = check_strategy(strategy)
+        elif type == "laplacian":
+            self.strategy = check_strategy(strategy)
+        elif type == "cs":
+            pass
+        elif type == "none":
+            pass
+        else:
+            raise ValueError("type must be one of the following: {}".format(
+                ["wavelet", "laplacian", "cs"]))
+
+    def sharpen(self, cube: np.array, sbi: int) -> np.array:
+        """ Sharpen a cube using the specified sharpening algorithm.
+
+            Args:
+            --------
+                cube (np.ndarray): The cube to sharpen.
+                sbi (np.ndarray): The Sharpest Base Image Index in the cube.
+
+            Returns:
+            --------
+                np.ndarray: The sharpened cube.
+        """
+
+        if self.type == "wavelet":
+            return self.wavelet_cube_sharpen(cube, sbi)
+        elif self.type == "laplacian":
+            return self.laplacian_cube_sharpen(cube, sbi)
+        elif self.type == "cs":
+            return self.cs_sharpen(cube, sbi)
+        elif self.type == "none":
+            return cube
+        else:
+            raise ValueError("type must be one of the following: {}".format(
+                ["wavelet", "laplacian", "cs", "none"]))
+
+    def wavelet_cube_sharpen(self, cube: np.ndarray, sbi: int) -> np.ndarray:
+        sharpened_cube = np.zeros(cube.shape)
+        if self.strategy == "regular":
+            sharpened_cube = wavelet_cube_sharpen_regular(
+                cube, sbi, self.mother_wavelet, self.wavelet_level)
+        elif self.strategy == "ladder":
+            sharpened_cube = cube
+        return sharpened_cube
+
+    def laplacian_cube_sharpen(self, cube: np.ndarray, sbi: int) -> np.ndarray:
+        sharpened_cube = np.zeros(cube.shape)
+        if self.strategy == "regular":
+            sharpened_cube = laplacian_cube_sharpen_regular(cube, sbi)
+        elif self.strategy == "ladder":
+            sharpened_cube = cube
+        return sharpened_cube
+
+    def cs_sharpen(self, cube: np.ndarray, sbi: int = None) -> np.ndarray:
+        """Sharpen an image using the component substitution algorithm.
+        """
+        return component_subtitution(cube, sbi)
+
+def wavelet_cube_sharpen_regular(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
+    """Sharpen a cube using the wavelet sharpening algorithm with a regular strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        mother_wavelet (str): The mother wavelet to use.
+        wavelet_level (int): The level of the wavelet transform.
+    
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+    sharpened_cube = np.zeros(cube.shape)
+
+    for i in range(cube.shape[0]):
+        sharpened_cube[i] = wavelet_sharpen(
+            cube[i], cube[sbi], mother_wavelet, wavelet_level)
+    
+    return sharpened_cube
+
+def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
+    """Sharpen a cube using the wavelet sharpening algorithm with a ladder strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        mother_wavelet (str): The mother wavelet to use.
+        wavelet_level (int): The level of the wavelet transform.
+    
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+    sharpened_cube = np.zeros(cube.shape)
+
+    # TODO: Implement ladder strategy
+    
+    return sharpened_cube
+
+def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, kernel_size: int = 5) -> np.ndarray:
+    """Sharpen a cube using the laplacian sharpening algorithm with a regular strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        kernel_size (int): The size of the kernel to use.
+    
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+    import numpy as np
+    import cv2
+
+    sharpened_cube = np.zeros(cube.shape)
+    kernel = np.array([[0, -1, 0], [-1, kernel_size, -1], [0, -1, 0]])
+    for i in range(cube.shape[2]):
+        sharpened_ref = cv2.filter2D(cube[:,:,sbi], -1, kernel)
+        sharpened_cube[:,:,i] = sharpened_ref
+    
+    return sharpened_cube
