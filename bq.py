@@ -2,7 +2,7 @@ import plotly.graph_objs as go
 import cv2
 import numpy as np
 from libsvm import svmutil  # used in brisque
-from brisque import BRISQUE as bq
+from brisque import BRISQUE
 from math import isnan
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 #       https://github.com/krshrimali/No-Reference-Image-Quality-Assessment-using-BRISQUE-Model
 
 
-def scoreCube(cube: np.ndarray) -> np.ndarray:
+def scoreCube(cube: np.ndarray, fast: bool = True) -> np.ndarray:
     """Calculate the brisque metric.
 
     Args:
@@ -25,9 +25,33 @@ def scoreCube(cube: np.ndarray) -> np.ndarray:
     """
     brisque_metric = np.zeros(cube.shape[2])
     for i in range(cube.shape[2]):
-        brisque_metric[i] = scoreImage(cube[:, :, i])
+        if fast:
+            brisque_metric[i] = scoreImage_fast(cube[:, :, i])
+        else:
+            brisque_metric[i] = scoreImage(cube[:, :, i])
 
     return brisque_metric
+
+def scoreImage_fast(image: np.ndarray) -> float:
+    import cv2
+
+    # Get current file path
+    import os
+    path = os.path.dirname(os.path.abspath(__file__))
+
+    # combine the path with the model and range files
+    model_path = "brisque_models/brisque_model_live.yml"
+    range_path = "brisque_models/brisque_range_live.yml"
+
+    model_path = os.path.join(path, model_path)
+    range_path = os.path.join(path, range_path)
+
+    score = cv2.quality.QualityBRISQUE_compute(image, model_path, range_path)[0]
+
+    if score <= 1:
+        return 100
+    else:
+        return score
 
 
 def scoreImage(image: np.ndarray) -> float:
@@ -40,9 +64,11 @@ def scoreImage(image: np.ndarray) -> float:
         float: The value in terms of the brisque metric.
     """
 
-    s = bq()
+    s = BRISQUE()
 
-    ret = s.get_score(image)
+    image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
+
+    ret = s.score(image)
 
     if isnan(ret):
         ret = 100
