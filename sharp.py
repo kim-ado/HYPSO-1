@@ -146,7 +146,7 @@ class sharp:
             self.brisque = self.get_brisque()
         else:
             self.brisque = self.get_brisque()
-            #self.sam = self.get_sam()
+            # self.sam = self.get_sam()
 
 
 def sam(image: np.ndarray, refrence_image: np.ndarray, return_image: bool = False) -> np.ndarray:
@@ -171,14 +171,16 @@ def sam(image: np.ndarray, refrence_image: np.ndarray, return_image: bool = Fals
             vector_img = image[x, y, :].flatten()
             vector_ref = refrence_image[x, y, :].flatten()
 
-            angle = np.arccos(np.dot(vector_img, vector_ref) / (np.linalg.norm(vector_img) * np.linalg.norm(vector_ref)))
-            sam_image[x,y] = angle
-        
+            angle = np.arccos(np.dot(vector_img, vector_ref) /
+                              (np.linalg.norm(vector_img) * np.linalg.norm(vector_ref)))
+            sam_image[x, y] = angle
+
     avg_sam = np.mean(sam_image)
     if return_image:
         return avg_sam, sam_image
     else:
         return avg_sam
+
 
 def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) -> np.ndarray:
     """Perform component substitution on an image cube.
@@ -227,6 +229,7 @@ def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) ->
 
     return sharpend_cube
 
+
 def wavelet_sharpen(base_image: np.ndarray,
                     reference_image: np.ndarray,
                     wavelet: str = "db1",
@@ -256,7 +259,7 @@ def wavelet_sharpen(base_image: np.ndarray,
     # Replace base image coefficients with reference image coefficients
     sharpened_coeffs = reference_coeffs
     sharpened_coeffs[0] = base_coeffs[0]
-    
+
     # Perform inverse wavelet transform
     sharpened_image = pywt.waverec2(base_coeffs, wavelet)
 
@@ -265,12 +268,13 @@ def wavelet_sharpen(base_image: np.ndarray,
     else:
         return sharpened_image
 
+
 class SharpeningAlg:
     def __init__(self, type: str,
                  mother_wavelet: str = None,
                  wavelet_level: int = None,
                  strategy: str = None,
-                 kernel_size: int = None,):
+                 filter_order: int = None,):
 
         self.type = type
 
@@ -289,24 +293,24 @@ class SharpeningAlg:
 
         def check_strategy(strategy):
             valid_strategies = [
-                "regular", 
+                "regular",
                 "ladder"
-                ]
-            strategy = strategy.lower()
-            if strategy is None and (type == "wavelet" or  type == "laplacian"):
+            ]
+
+            if strategy is None and (type == "wavelet" or type == "laplacian"):
                 raise ValueError(f"strategy must be specified for type {type}")
-            elif strategy not in valid_strategies:
+            elif strategy.lower() not in valid_strategies:
                 raise ValueError(
                     f"strategy: {strategy}, must be one of the following: {valid_strategies}")
-            return strategy
-        
-        def check_kernel_size(kernel_size):
-            if kernel_size is None:
-                raise ValueError("kernel_size must be specified")
-            elif kernel_size % 2 == 0:
-                raise ValueError("kernel_size must be an odd integer")
+            return strategy.lower()
+
+        def check_filter_order(filter_order):
+            if filter_order is None:
+                raise ValueError("filter_order must be specified")
+            elif filter_order <= 0:
+                raise ValueError("filter_order must be an integer")
             else:
-                return kernel_size
+                return filter_order
 
         if type == "wavelet":
             self.mother_wavelet = check_wavelet(mother_wavelet)
@@ -314,14 +318,14 @@ class SharpeningAlg:
             self.strategy = check_strategy(strategy)
         elif type == "laplacian":
             self.strategy = check_strategy(strategy)
-            self.kernel_size = check_kernel_size(kernel_size)
+            self.filter_order = check_filter_order(filter_order)
         elif type == "cs":
             pass
         elif type == "none":
             pass
         else:
             raise ValueError("type must be one of the following: {}".format(
-                ["wavelet", "laplacian", "cs"]))
+                ["wavelet", "laplacian", "cs", "none"]))
 
     def sharpen(self, cube: np.array, sbi: int) -> np.array:
         """ Sharpen a cube using the specified sharpening algorithm.
@@ -360,7 +364,8 @@ class SharpeningAlg:
     def laplacian_cube_sharpen(self, cube: np.ndarray, sbi: int) -> np.ndarray:
         sharpened_cube = np.zeros(cube.shape)
         if self.strategy == "regular":
-            sharpened_cube = laplacian_cube_sharpen_regular(cube, sbi, self.kernel_size)
+            sharpened_cube = laplacian_cube_sharpen_regular(
+                cube, sbi, self.filter_order)
         elif self.strategy == "ladder":
             sharpened_cube = cube
         return sharpened_cube
@@ -370,6 +375,7 @@ class SharpeningAlg:
         """
         return component_subtitution(cube, sbi)
 
+
 def wavelet_cube_sharpen_regular(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
     """Sharpen a cube using the wavelet sharpening algorithm with a regular strategy.
 
@@ -378,16 +384,17 @@ def wavelet_cube_sharpen_regular(cube: np.ndarray, sbi: int, mother_wavelet: str
         sbi (int): The Sharpest Base Image Index in the cube.
         mother_wavelet (str): The mother wavelet to use.
         wavelet_level (int): The level of the wavelet transform.
-    
+
     Returns:
         np.ndarray: The sharpened cube.
     """
     sharpened_cube = np.zeros(cube.shape)
     for i in range(cube.shape[2]):
-        sharpened_cube[:,:,i] = wavelet_sharpen(
-            cube[:,:,i], cube[:,:,sbi], mother_wavelet, wavelet_level)
-            
+        sharpened_cube[:, :, i] = wavelet_sharpen(
+            cube[:, :, i], cube[:, :, sbi], mother_wavelet, wavelet_level)
+
     return sharpened_cube
+
 
 def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
     """Sharpen a cube using the wavelet sharpening algorithm with a ladder strategy.
@@ -397,35 +404,43 @@ def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str,
         sbi (int): The Sharpest Base Image Index in the cube.
         mother_wavelet (str): The mother wavelet to use.
         wavelet_level (int): The level of the wavelet transform.
-    
+
     Returns:
         np.ndarray: The sharpened cube.
     """
     sharpened_cube = np.zeros(cube.shape)
 
     # TODO: Implement ladder strategy
-    
+
     return sharpened_cube
 
-def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, kernel_size: int = 5) -> np.ndarray:
+
+def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, filter_order: int = 5) -> np.ndarray:
     """Sharpen a cube using the laplacian sharpening algorithm with a regular strategy.
 
     Args:
         cube (np.ndarray): The cube to sharpen.
         sbi (int): The Sharpest Base Image Index in the cube.
-        kernel_size (int): The size of the kernel to use.
-    
+        filter_order (int): The size of the kernel to use.
+
     Returns:
         np.ndarray: The sharpened cube.
     """
     import numpy as np
-    import cv2
+    from skimage.filters import butterworth
+    from skimage.exposure import match_histograms
 
     sharpened_cube = np.zeros(cube.shape)
-    kernel = np.array([[0, -1, 0], [-1, kernel_size, -1], [0, -1, 0]])
-    # TODO: Still have not got the laplacian sharpening to work properly
+
     for i in range(cube.shape[2]):
-        sharpened_ref = cv2.filter2D(cube[:,:,sbi], -1, kernel)
-        sharpened_cube[:,:,i] = sharpened_ref
-    
+        ref_im = cube[:, :, sbi]
+        base_im = cube[:, :, i]
+        ref_im = np.multiply((ref_im - np.mean(ref_im)) , (np.std(base_im) / np.std(ref_im))) + np.mean(base_im)
+        ref_lp = butterworth(ref_im, high_pass=False, channel_axis=-1, npad=10, order=2)
+        eps = np.finfo(float).eps
+        im1 = np.multiply(base_im, (ref_im / (ref_lp + eps)))
+        im1 = match_histograms(im1, base_im)
+
+        sharpened_cube[:, :, i] = im1
+
     return sharpened_cube
