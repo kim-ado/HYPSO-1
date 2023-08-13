@@ -440,7 +440,6 @@ def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, filter_order: int
         eps = np.finfo(float).eps
         im1 = np.multiply(base_im, (ref_im / (ref_lp + eps)))
         im1 = match_histograms(im1, base_im)
-
         sharpened_cube[:, :, i] = im1
 
     return sharpened_cube
