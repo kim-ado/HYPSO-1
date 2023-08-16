@@ -261,7 +261,7 @@ def wavelet_sharpen(base_image: np.ndarray,
     sharpened_coeffs[0] = base_coeffs[0]
 
     # Perform inverse wavelet transform
-    sharpened_image = pywt.waverec2(base_coeffs, wavelet)
+    sharpened_image = pywt.waverec2(sharpened_coeffs, wavelet)
 
     if provide_coeffs:
         return sharpened_image, base_coeffs, reference_coeffs
@@ -323,6 +323,19 @@ class SharpeningAlg:
             pass
         elif type == "none":
             pass
+        else:
+            raise ValueError("type must be one of the following: {}".format(
+                ["wavelet", "laplacian", "cs", "none"]))
+
+    def string(self):
+        if self.type == "wavelet":
+            return f"{self.type}_{self.mother_wavelet}_{self.wavelet_level}_{self.strategy}"
+        elif self.type == "laplacian":
+            return f"{self.type}_{self.filter_order}_{self.strategy}"
+        elif self.type == "cs":
+            return f"{self.type}"
+        elif self.type == "none":
+            return f"{self.type}"
         else:
             raise ValueError("type must be one of the following: {}".format(
                 ["wavelet", "laplacian", "cs", "none"]))
