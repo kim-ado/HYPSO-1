@@ -1,5 +1,6 @@
 open-code/
 data/
+images/
 .ipynb_checkpoints/
 *.html
 *.jpg
