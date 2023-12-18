@@ -1,0 +1,15 @@
+open-code/
+data/
+.ipynb_checkpoints/
+*.html
+*.jpg
+*.pdf
+# Ignore all compiled python files
+*.pyc
+*.pkl
+*.png
+*/powerpoint/*
+*.DS_Store
+images/
+fig/
+cal-char-corr/

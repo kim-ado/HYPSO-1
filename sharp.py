@@ -1,6 +1,6 @@
 import numpy as np
 import spectral.io.envi as envi
-
+import metric
 import h1data
 
 
@@ -12,12 +12,17 @@ class sharp:
         self.sharpened_cube = None
         self.sharpest_band_index = None
 
-        # metrics - no refrence
-        self.brisque = {}
-
         # metrics - full refrence
         self.sam = {}
-
+        self.ergas = {}
+        self.uiqi = {}
+        
+        # metrics - no reference
+        self.d_s = {}
+        self.d_rho = {}
+        self.d_lambda = {}
+        self.qnr = {}
+        
         self.name = "sharp"
 
     def set_name(self, name: str):
@@ -87,19 +92,6 @@ class sharp:
 
         return sharp_obj
 
-    def get_brisque(self) -> np.ndarray:
-        import bq
-
-        self.brisque["initial"] = bq.scoreCube(self.initial_cube)
-
-        if self.refrence_cube is not None:
-            self.brisque["refrence"] = bq.scoreCube(self.refrence_cube)
-
-        if self.sharpened_cube is not None:
-            self.brisque["sharpend"] = bq.scoreCube(self.sharpened_cube)
-
-        return self.brisque
-
     def get_sam(self) -> np.ndarray:
         """Get the sam metric.
 
@@ -147,6 +139,13 @@ class sharp:
         else:
             self.brisque = self.get_brisque()
             # self.sam = self.get_sam()
+    
+    def ranking_bands(self):
+        """ Helper function to find which bands are the same sharpness
+
+        Args: 
+            Cube to 
+        """
 
 
 def sam(image: np.ndarray, refrence_image: np.ndarray, return_image: bool = False) -> np.ndarray:
@@ -180,6 +179,7 @@ def sam(image: np.ndarray, refrence_image: np.ndarray, return_image: bool = Fals
         return avg_sam, sam_image
     else:
         return avg_sam
+
 
 
 def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) -> np.ndarray:
@@ -294,7 +294,8 @@ class SharpeningAlg:
         def check_strategy(strategy):
             valid_strategies = [
                 "regular",
-                "ladder"
+                "ladder",
+                "ladder_bottom"
             ]
 
             if strategy is None and (type == "wavelet" or type == "laplacian"):
@@ -371,7 +372,11 @@ class SharpeningAlg:
             sharpened_cube = wavelet_cube_sharpen_regular(
                 cube, sbi, self.mother_wavelet, self.wavelet_level)
         elif self.strategy == "ladder":
-            sharpened_cube = cube
+            sharpened_cube = wavelet_cube_sharpen_stepwise(
+                cube, sbi, self.mother_wavelet, self.wavelet_level)
+        elif self.strategy == "ladder_bottom":
+            sharpened_cube = wavelet_cube_sharpen_stepwise_next_order(
+                cube, sbi, self.mother_wavelet, self.wavelet_level)
         return sharpened_cube
 
     def laplacian_cube_sharpen(self, cube: np.ndarray, sbi: int) -> np.ndarray:
@@ -379,8 +384,12 @@ class SharpeningAlg:
         if self.strategy == "regular":
             sharpened_cube = laplacian_cube_sharpen_regular(
                 cube, sbi, self.filter_order)
-        elif self.strategy == "ladder":
-            sharpened_cube = cube
+        if self.strategy == "ladder":
+            sharpened_cube = laplacian_cube_sharpen_stepwise(
+                cube, sbi, self.filter_order)
+        if self.strategy == "ladder_bottom":
+            sharpened_cube = laplacian_cube_sharpen_stepwise_next_order(
+                cube, sbi, self.filter_order)
         return sharpened_cube
 
     def cs_sharpen(self, cube: np.ndarray, sbi: int = None) -> np.ndarray:
@@ -409,8 +418,9 @@ def wavelet_cube_sharpen_regular(cube: np.ndarray, sbi: int, mother_wavelet: str
     return sharpened_cube
 
 
-def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
-    """Sharpen a cube using the wavelet sharpening algorithm with a ladder strategy.
+
+def wavelet_cube_sharpen_stepwise(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
+    """Sharpen a cube using the wavelet sharpening algorithm with a stepwise strategy.
 
     Args:
         cube (np.ndarray): The cube to sharpen.
@@ -422,8 +432,57 @@ def wavelet_cube_sharpen_ladder(cube: np.ndarray, sbi: int, mother_wavelet: str,
         np.ndarray: The sharpened cube.
     """
     sharpened_cube = np.zeros(cube.shape)
+    band_order = determine_band_order(cube, sbi)
 
-    # TODO: Implement ladder strategy
+    for i in range(cube.shape[2]):
+        base_index = band_order[i]
+        ref_index = sbi
+
+        sharpened_cube[:, :, base_index] = wavelet_sharpen(
+            cube[:, :, base_index], cube[:, :, ref_index], mother_wavelet, wavelet_level)
+
+    return sharpened_cube
+
+def wavelet_cube_sharpen_stepwise_next_order(cube: np.ndarray, sbi: int, mother_wavelet: str, wavelet_level: int) -> np.ndarray:
+    """Sharpen a cube using the wavelet sharpening algorithm with a stepwise strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        mother_wavelet (str): The mother wavelet to use.
+        wavelet_level (int): The level of the wavelet transform.
+
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+    
+    sharpened_cube = np.zeros(cube.shape)
+    
+    for i in range(sbi):
+        base_index = i
+        ref_index = i + 1
+        sharpened_cube[:, :, base_index] = wavelet_sharpen(
+            cube[:, :, base_index], cube[:, :, ref_index], mother_wavelet, wavelet_level)
+        
+        # Additional iterations for left side
+        for j in range(i):
+            base_index_left = j
+            ref_index_left = ref_index
+            sharpened_cube[:, :, base_index_left] = wavelet_sharpen(
+                cube[:, :, base_index_left], cube[:, :, ref_index_left], mother_wavelet, wavelet_level)
+
+    for i in range(cube.shape[2] - 2, sbi - 1, -1):
+        base_index = i + 1  # Start from the second-to-last band and move towards sbi
+        ref_index = i 
+        sharpened_cube[:, :, base_index] = wavelet_sharpen(
+            cube[:, :, base_index], cube[:, :, ref_index], mother_wavelet, wavelet_level)
+        
+        # Additional iterations for right side
+        for j in range(cube.shape[2] - 2, i, -1):
+            base_index_right = j + 1 
+            ref_index_right = ref_index 
+            sharpened_cube[:, :, base_index_right] = wavelet_sharpen(
+                cube[:, :, base_index_right], cube[:, :, ref_index_right], mother_wavelet, wavelet_level)
 
     return sharpened_cube
 
@@ -456,3 +515,111 @@ def laplacian_cube_sharpen_regular(cube: np.ndarray, sbi: int, filter_order: int
         sharpened_cube[:, :, i] = im1
 
     return sharpened_cube
+
+def laplacian_cube_sharpen_stepwise(cube: np.ndarray, sbi: int, filter_order: int = 5) -> np.ndarray:
+    """Sharpen a cube using the Laplacian sharpening algorithm with a stepwise strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        filter_order (int): The size of the kernel to use.
+
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+       
+    import numpy as np
+    from skimage.filters import butterworth
+    from skimage.exposure import match_histograms
+    
+    sharpened_cube = np.zeros(cube.shape)
+    band_order = determine_band_order(cube, sbi)
+
+    for i in range(cube.shape[2]):
+        base_index = band_order[i]
+        ref_im = cube[:, :, sbi]
+        base_im = cube[:, :, i]
+        ref_im = np.multiply((ref_im - np.mean(ref_im)) , (np.std(base_im) / np.std(ref_im))) + np.mean(base_im)
+        ref_lp = butterworth(ref_im, high_pass=False, channel_axis=-1, npad=10, order=2)
+        eps = np.finfo(float).eps
+        im1 = np.multiply(base_im, (ref_im / (ref_lp + eps)))
+        im1 = match_histograms(im1, base_im)
+        sharpened_cube[:, :, i] = im1
+
+    return sharpened_cube
+
+
+def laplacian_cube_sharpen_stepwise_next_order(cube: np.ndarray, sbi: int, filter_order: int = 5) -> np.ndarray:
+    """Sharpen a cube using the Laplacian sharpening algorithm with a stepwise strategy.
+
+    Args:
+        cube (np.ndarray): The cube to sharpen.
+        sbi (int): The Sharpest Base Image Index in the cube.
+        filter_order (int): The size of the kernel to use.
+
+    Returns:
+        np.ndarray: The sharpened cube.
+    """
+    import numpy as np
+    from skimage.filters import butterworth
+    from skimage.exposure import match_histograms
+    
+    sharpened_cube = np.zeros(cube.shape)
+    
+    for i in range(sbi):
+        base_index = i
+        ref_index = i + 1
+        sharpened_cube[:, :, base_index] = sharpen_band_laplacian(cube, ref_index, base_index)
+        
+        # Additional iterations for left side
+        for j in range(i):
+            base_index_left = j
+            ref_index_left = ref_index
+            sharpened_cube[:, :, base_index_left] = sharpen_band_laplacian(cube, ref_index_left, base_index_left)
+
+    for i in range(cube.shape[2] - 2, sbi - 1, -1):
+        base_index = i + 1  # Start from the second-to-last band and move towards sbi
+        ref_index = i 
+        sharpened_cube[:, :, base_index] = sharpen_band_laplacian(cube, ref_index, base_index)
+        
+        # Additional iterations for right side
+        for j in range(cube.shape[2] - 2, i, -1):
+            base_index_right = j + 1 
+            ref_index_right = ref_index 
+            sharpened_cube[:, :, base_index_right] = sharpen_band_laplacian(cube, ref_index_right, base_index_right)
+    
+    return sharpened_cube
+
+def sharpen_band_laplacian(cube, ref_index, base_index):
+    import numpy as np
+    from skimage.filters import butterworth
+    from skimage.exposure import match_histograms
+    
+    ref_im = cube[:, :, ref_index]
+    base_im = cube[:, :, base_index]
+    ref_im = np.multiply((ref_im - np.mean(ref_im)), (np.std(base_im) / np.std(ref_im))) + np.mean(base_im)
+    ref_lp = butterworth(ref_im, high_pass=False, channel_axis=-1, npad=10, order=2)
+    eps = np.finfo(float).eps
+    im1 = np.multiply(base_im, (ref_im / (ref_lp + eps)))
+    im1 = match_histograms(im1, base_im)
+    return im1
+
+
+def determine_band_order(cube: np.ndarray, sbi: int) -> np.ndarray:
+    """Determine the order of bands based on a circular strategy.
+
+    Args:
+        cube (np.ndarray): The cube.
+        sbi (int): The Sharpest Base Image Index in the cube.
+
+    Returns:
+        np.ndarray: The order of bands based on a circular strategy.
+    """
+    distances = np.abs(np.arange(cube.shape[2]) - sbi) % cube.shape[2]
+
+    band_order = np.argsort(distances)
+    
+    return band_order
+
+
+

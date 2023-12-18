@@ -24,5 +24,6 @@ dependencies:
   - nbstripout>=0.6.1
   - python-kaleido>=0.2.1
   - PyWavelets>=1.4.1
+  - pytorch
   - pip:
     - brisque>=0.0.15
