@@ -105,5 +105,7 @@ class blurredImage:
     
     def get_hico_images(self):
         self.raw_image = hicodata
+        image = hicodata.getdata
         
+
 
