@@ -95,3 +95,14 @@ class datatype:
         info["im_size"] = info["image_height"]*info["image_width"]
 
         return info
+
+class blurredImage:
+    def __init__(self) -> None:
+        self.image_height = None
+        self.image_width = None
+        self.bands = None
+        self.image = None
+    
+    def get_hico_images(self, )
+        
+
