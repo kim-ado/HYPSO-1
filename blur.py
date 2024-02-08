@@ -1,4 +1,4 @@
-class datatype:
+class hicodata:
     def __init__(self):
         """Initialize the data class.
 
@@ -103,6 +103,7 @@ class blurredImage:
         self.bands = None
         self.image = None
     
-    def get_hico_images(self, )
+    def get_hico_images(self):
+        self.raw_image = hicodata
         
 
