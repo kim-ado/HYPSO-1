@@ -1,4 +1,18 @@
 import requests
+import cv2
+import numpy as np
+import os
+import xarray as xr
+import netCDF4
+import pandas as pd
+import holoview as hv
+from sklearn import svm
+import sklearn
+from sklearn.model_selection import GridSearchCV
+import visacc
+import maskacc
+hv.notebook_extension('matplotlib')
+
 
 class hicodata:
     def __init__(self):
@@ -33,7 +47,31 @@ class blurredImage:
     
     def get_hico_images(self):
         self.raw_image = hicodata
-        image = hicodata.getdata
+    
+    def get_cube(self) -> np.ndarray:
+        """Get the raw data from the folder.
+
+        Returns:
+            np.ndarray: The raw data.
+        """
+        # find file ending in .nc
+        for file in os.listdir(self.info["folder_name"]):
+            if file.endswith(".np"):
+                path_to_np = os.path.join(
+                    self.info["folder_name"], file)
+                break
+
+        cube.values[cube.values<0] = np.nan 
+
+        cube = xr.open.dataarray(path_to_np)
+
+        return cube
+    
+    def blur_image(self, raw_image):
+        
+
+
+
         
 
 
