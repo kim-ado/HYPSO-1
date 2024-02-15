@@ -49,7 +49,6 @@ class blurredCube:
 
         cube = xr.open.dataarray(path_to_np)
 
-        self.image_width = cube.
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway
 
