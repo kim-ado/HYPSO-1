@@ -26,6 +26,8 @@ class blurredCube:
         self.bands = None
         self.cube = None
         self.array = None
+        self.lsf = lsf()
+
     
     def get_hico_images(self):
         # do something
@@ -49,12 +51,12 @@ class blurredCube:
 
         cube = xr.open.dataarray(path_to_np)
 
-
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway
 
         return cube
     
-    def blur_cube(self, cube):
+    
+    def blur_cube(self):
         """
             Blurs the cube in question
 
@@ -64,14 +66,17 @@ class blurredCube:
             Returns:
                 Blurred cube
         """
-        for i in range(cube.shape[2]):
-            exit ## 
+        for i in range(self.cube.shape[2]):
+            
+
 
 class hicodata:
     def __init__(self):
         files_folder = None
         data = None
+        cube = []
 
+    # Example from NASAs website 
     def getHicoDataFromWeb(self):
         # Set the URL string to point to a specific data URL. Some generic examples are:
         #   https://data.gesdisc.earthdata.nasa.gov/data/MERRA2/path/to/granule.nc4
@@ -90,6 +95,14 @@ class hicodata:
         except:
             print('requests.get() returned an error code '+str(result.status_code))
 
+    def scale_cube(self, ):
+        """
+            We need to scale data before use, for level 1b it is 0.02
+
+            https://oceancolor.gsfc.nasa.gov/data/hico/instrument/dataset-characteristics/#ISF
+        """
+
+        
 
 class lsf():
     def __init__(self):
@@ -102,8 +115,10 @@ class lsf():
     def _parabole_func(self, y):
         return np.power(4*y, 0.5)
     
-    def segmentation_and_values_of_parabole(self, bands, center_wavelength):
+    def segmentation_and_values_of_parabole(self):
         self.get_fwhm_val(self, image_edge)
+        for band in enumerate(self.bands):
+            delta = self.parabole_func(band)
 
     def generate_parabole_sigma_values(self, start_wavelength, center_wavelength, bands):
         """
