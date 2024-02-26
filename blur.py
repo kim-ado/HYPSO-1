@@ -67,7 +67,7 @@ class blurredCube:
                 Blurred cube
         """
         for i in range(self.cube.shape[2]):
-            
+            self.lsf.
 
 
 class hicodata:
