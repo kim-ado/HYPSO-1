@@ -1,6 +1,7 @@
 open-code/
 data/
 images/
+hico_data
 .ipynb_checkpoints/
 *.html
 *.jpg

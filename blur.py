@@ -1,5 +1,5 @@
 import requests
-import cv2
+import opencv 
 import numpy as np
 import os
 import xarray as xr
@@ -20,20 +20,16 @@ hv.notebook_extension('matplotlib')
 
 
 class blurredCube:
-    def __init__(self) -> None:
+    def __init__(self):
         self.image_height = None
         self.image_width = None
         self.bands = None
         self.cube = None
         self.array = None
         self.lsf = lsf()
+        self.info = None
+        self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
 
-    
-    def get_hico_images(self):
-        # do something
-
-        return self.cube
-    
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
 
@@ -41,7 +37,7 @@ class blurredCube:
             np.ndarray: The raw data.
         """
         # find file ending in .nc
-        for file in os.listdir(self.info["folder_name"]):
+        for file in os.listdir(self.folder_name["folder_name"]):
             if file.endswith(".np"):
                 path_to_np = os.path.join(
                     self.info["folder_name"], file)
@@ -51,11 +47,18 @@ class blurredCube:
 
         cube = xr.open.dataarray(path_to_np)
 
-        # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway
+        # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
 
         return cube
     
+    def read_cube(self):
+        print(self.cube)
+
+    def get_hico_images(self):
+        # do something
+        return self.cube
     
+
     def blur_cube(self):
         """
             Blurs the cube in question
@@ -66,8 +69,6 @@ class blurredCube:
             Returns:
                 Blurred cube
         """
-        for i in range(self.cube.shape[2]):
-            self.lsf.
 
 
 class hicodata:
@@ -77,7 +78,7 @@ class hicodata:
         cube = []
 
     # Example from NASAs website 
-    def getHicoDataFromWeb(self):
+    def get_hico_data_from_web(self):
         # Set the URL string to point to a specific data URL. Some generic examples are:
         #   https://data.gesdisc.earthdata.nasa.gov/data/MERRA2/path/to/granule.nc4
 
@@ -95,12 +96,7 @@ class hicodata:
         except:
             print('requests.get() returned an error code '+str(result.status_code))
 
-    def scale_cube(self, ):
-        """
-            We need to scale data before use, for level 1b it is 0.02
 
-            https://oceancolor.gsfc.nasa.gov/data/hico/instrument/dataset-characteristics/#ISF
-        """
 
         
 
