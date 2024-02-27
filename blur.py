@@ -29,6 +29,7 @@ class blurredCube:
         self.lsf = lsf()
         self.info = None
         self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
+        self.cubes = None
 
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
@@ -69,6 +70,8 @@ class blurredCube:
             Returns:
                 Blurred cube
         """
+        for cube in self.cubes[1]:
+            
 
 
 class hicodata:
@@ -97,35 +100,37 @@ class hicodata:
             print('requests.get() returned an error code '+str(result.status_code))
 
 
-
-        
-
 class lsf():
     def __init__(self):
         self.sigma_values = []
-        self.parabole_func = self._parabole_func
         self.bands = None
         self.center_wavelength = None
         self.hico_image_edge = None
+        self.current_fwhm = []
+        self.new_fwhm = []
+        self.blurriest_fwhm = 3.5 
+        self.sharpest_fwhm = None
 
-    def _parabole_func(self, y):
-        return np.power(4*y, 0.5)
-    
-    def segmentation_and_values_of_parabole(self):
-        self.get_fwhm_val(self, image_edge)
-        for band in enumerate(self.bands):
-            delta = self.parabole_func(band)
+    def generate_desired_fwhm(self):
+        if len(self.new_fwhm) == 0:
+            self.parabole_func()
+            print("Generated desired parabole FWHM curve")
+        else:
+            print("List is already generated.")
 
-    def generate_parabole_sigma_values(self, start_wavelength, center_wavelength, bands):
-        """
-            Helper function to generate wavelength dependent blur values for gaussian blur
 
-            Returns:
-                array for sigma values
-        """
-        for i in range((len(bands)-1)/2):
-            sigma = i 
-            self.sigma_values.append()
+    def parabole_func(self):
+        a_1 = -2/((self.bands/2)**2)
+        for band_index in enumerate(self.bands):
+            if band_index == 0:
+                return self.new_fwhm.append(self.blurriest_fwhm)
+            elif band_index < self.bands/2:
+                self.new_fwhm.append(- (a_1) * (self.bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
+            elif (band_index > self.bands/2 and band_index < len(self.bands)):
+                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((self.bands)/2)^2 - len(self.bands))
+                b = self.blurriest_fwhm - a_2* ((self.bands)/2)**2
+                self.new_fwhm.append((a_2) * (self.bands/2) ** 2 + b)
+
     
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
