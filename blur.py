@@ -1,11 +1,10 @@
 import requests
-import opencv 
+import cv2
 import numpy as np
 import os
 import xarray as xr
 import netCDF4
 import pandas as pd
-import holoview as hv
 from sklearn import svm
 import sklearn
 from sklearn.model_selection import GridSearchCV
@@ -15,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as si
 import scipy.optimize as so
-hv.notebook_extension('matplotlib')
+
 
 
 
@@ -59,6 +58,9 @@ class blurredCube:
         # do something
         return self.cube
     
+    def fwhm_calc(self):
+        self.cube.get_fwhm_val()
+            
 
     def blur_cube(self):
         """
@@ -71,8 +73,7 @@ class blurredCube:
                 Blurred cube
         """
         for cube in self.cubes[1]:
-            
-
+            pass
 
 class hicodata:
     def __init__(self):
@@ -131,7 +132,19 @@ class lsf():
                 b = self.blurriest_fwhm - a_2* ((self.bands)/2)**2
                 self.new_fwhm.append((a_2) * (self.bands/2) ** 2 + b)
 
-    
+    def detect_vertical_blur(image):
+        # Convert the image to grayscale
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Calculate the gradient in the y direction
+        gradient_y = cv2.Sobel(grayscale_image, cv2.CV_64F, 0, 1, ksize=5)
+
+        # Find the edge with the maximum gradient in y direction
+        max_gradient_y = np.max(np.abs(gradient_y))
+        sharpest_edge_y = np.where(np.abs(gradient_y) == max_gradient_y)
+
+        return sharpest_edge_y
+
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
 
