@@ -27,6 +27,7 @@ class blurredCube:
         self.info = None
         self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
         self.cubes = None
+        self.path_to_np = ''
 
     def compare_fwhm(self, cube, desired_fwhm, sigma):
         # Calculate the actual FWHM
@@ -48,20 +49,23 @@ class blurredCube:
         # find file ending in .nc
         for file in os.listdir(self.folder_name["folder_name"]):
             if file.endswith(".np"):
-                path_to_np = os.path.join(
+                self.path_to_np = os.path.join(
                     self.info["folder_name"], file)
                 break
 
-        cube.values[cube.values<0] = np.nan
-
-        cube = xr.open.dataarray(path_to_np)
-
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
 
-        return cube
     
     def read_cube(self):
         print(self.cube)
+        self.cube = xr.open.dataarray(self.path_to_np)
+        # Access the variable that contains the band wavelengths
+        band_wavelengths = data['wavelength']
+
+        # Find the index of the band that corresponds to the center wavelength
+        center_wavelength = 550  # replace this with your actual center wavelength
+        band_index = (np.abs(band_wavelengths - center_wavelength)).argmin()
+
 
     def get_hico_images(self):
         # do something
@@ -143,18 +147,18 @@ class lsf():
                 b = self.blurriest_fwhm - a_2* ((self.bands)/2)**2
                 self.new_fwhm.append((a_2) * (self.bands/2) ** 2 + b)
 
-    def detect_vertical_blur(image):
-        # Convert the image to grayscale
+    def detect_sharpest_edge(image):
+        """
+            Detect the sharpest edge of the image.
+        """
         grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Calculate the gradient in the y direction
+        gradient_x = cv2.Sobel(grayscale_image, cv2.CV_64F, 1, 0, ksize=5)
         gradient_y = cv2.Sobel(grayscale_image, cv2.CV_64F, 0, 1, ksize=5)
+        gradient_magnitude = np.sqrt(gradient_x**2 + gradient_y**2)
+        max_gradient = np.max(gradient_magnitude)
+        sharpest_edge = np.where(gradient_magnitude == max_gradient)
 
-        # Find the edge with the maximum gradient in y direction
-        max_gradient_y = np.max(np.abs(gradient_y))
-        sharpest_edge_y = np.where(np.abs(gradient_y) == max_gradient_y)
-
-        return sharpest_edge_y
+        return sharpest_edge
 
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
