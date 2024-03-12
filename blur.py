@@ -6,12 +6,8 @@ import xarray as xr
 import netCDF4
 import pandas as pd
 from sklearn import svm
-import sklearn
 from sklearn.model_selection import GridSearchCV
-import visacc
-import maskacc
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.interpolate as si
 import scipy.optimize as so
 
@@ -28,6 +24,7 @@ class blurredCube:
         self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
         self.cubes = None
         self.path_to_np = ''
+        self.sbi = 750
 
     def compare_fwhm(self, cube, desired_fwhm, sigma):
         # Calculate the actual FWHM
@@ -58,13 +55,13 @@ class blurredCube:
     
     def read_cube(self):
         print(self.cube)
-        self.cube = xr.open.dataarray(self.path_to_np)
+        data = xr.open.dataarray(self.path_to_np)
         # Access the variable that contains the band wavelengths
         band_wavelengths = data['wavelength']
+        band_index = (np.abs(band_wavelengths - self.sbi)).argmin()
 
-        # Find the index of the band that corresponds to the center wavelength
-        center_wavelength = 550  # replace this with your actual center wavelength
-        band_index = (np.abs(band_wavelengths - center_wavelength)).argmin()
+        image_data = data['data']
+        center_wavelength_data = image_data.sel(band=band_index)
 
 
     def get_hico_images(self):
