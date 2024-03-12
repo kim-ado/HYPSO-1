@@ -16,8 +16,6 @@ import scipy.interpolate as si
 import scipy.optimize as so
 
 
-
-
 class blurredCube:
     def __init__(self):
         self.image_height = None
@@ -29,6 +27,17 @@ class blurredCube:
         self.info = None
         self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
         self.cubes = None
+
+    def compare_fwhm(self, cube, desired_fwhm, sigma):
+        # Calculate the actual FWHM
+        actual_fwhm = self.blur_cube(cube, sigma)
+
+        # While the actual FWHM does not match the desired FWHM within 0.01 error, keep blurring
+        while abs(actual_fwhm - desired_fwhm) > 0.01:
+            sigma += 0.1  # Increase sigma
+            actual_fwhm = self.blur_cube(cube, sigma)
+
+        return cube
 
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
@@ -62,7 +71,7 @@ class blurredCube:
         self.cube.get_fwhm_val()
             
 
-    def blur_cube(self):
+    def blur_cube(self, sigma):
         """
             Blurs the cube in question
 
@@ -72,8 +81,10 @@ class blurredCube:
             Returns:
                 Blurred cube
         """
-        for cube in self.cubes[1]:
-            pass
+        for bands in self.cube:
+            fwhm = self.lsf.get_fwhm_val(self.cube[bands])
+            self.cube[bands] = cv2.GaussianBlur(self.cube[bands], (5, 5), sigma)
+
 
 class hicodata:
     def __init__(self):
