@@ -62,7 +62,7 @@ class blurredCube:
     
     def read_cube(self):
         print(self.cube)
-        data = xr.open.dataarray(self.path_to_np)
+        data = xr.open.dataarray(self.path_to_np) / 50.0
         # Access the variable that contains the band wavelengths
         band_wavelengths = data['wavelength']
         band_index = (np.abs(band_wavelengths - self.sbi)).argmin()
@@ -129,7 +129,7 @@ class lsf():
         self.current_fwhm = []
         self.new_fwhm = []
         self.blurriest_fwhm = 3.5 
-        self.sharpest_fwhm = None
+        self.sharpest_fwhm = 1.5
 
     def generate_desired_fwhm(self):
         if len(self.new_fwhm) == 0:
