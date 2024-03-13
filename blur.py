@@ -30,10 +30,17 @@ class blurredCube:
         # Calculate the actual FWHM
         actual_fwhm = self.blur_cube(cube, sigma)
 
-        # While the actual FWHM does not match the desired FWHM within 0.01 error, keep blurring
-        while abs(actual_fwhm - desired_fwhm) > 0.01:
-            sigma += 0.1  # Increase sigma
-            actual_fwhm = self.blur_cube(cube, sigma)
+        # Chech if desired fwhm is larger than actual fwhm
+        if desired_fwhm < actual_fwhm:
+            while abs(actual_fwhm - desired_fwhm) > 0.03:
+                sigma += 0.1  # Increase sigma
+                actual_fwhm = self.blur_cube(cube, sigma)
+        elif desired_fwhm > actual_fwhm:
+            while abs(actual_fwhm - desired_fwhm) > 0.03:
+                sigma += 0.1 # Increase sigma
+                actual_fwhm = self.blur_cube(cube, sigma)
+        
+
 
         return cube
 
