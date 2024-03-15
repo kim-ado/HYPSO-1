@@ -3,43 +3,72 @@ import cv2
 import numpy as np
 import os
 import xarray as xr
-import netCDF4
-import pandas as pd
-from sklearn import svm
-from sklearn.model_selection import GridSearchCV
 import numpy as np
 import scipy.interpolate as si
 import scipy.optimize as so
 
 
-class blurredCube:
+class hicoData:
     def __init__(self):
-        self.image_height = None
-        self.image_width = None
-        self.bands = None
-        self.cube = None
-        self.array = None
-        self.lsf = lsf()
-        self.info = None
         self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
-        self.cubes = None
-        self.path_to_np = ''
-        self.sbi = 750
+        files_folder = None
+        data = None
+        cube = []
+        self.sbi = 750 # The center wavelength of the band of interest
+
+    # Example from NASAs website 
+    def get_hico_data_from_web(self):
+        # Set the URL string to point to a specific data URL. Some generic examples are:
+        #   https://data.gesdisc.earthdata.nasa.gov/data/MERRA2/path/to/granule.nc4
+
+        URL = 'https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Level-1B/HICO/2014/042/'
+
+        # Set the FILENAME string to the data file name, the LABEL keyword value, or any customized name. 
+        filename = 'your_file_string_goes_here'
+        result = requests.get(URL)
+        try:
+            result.raise_for_status()
+            f = open(filename,'wb')
+            f.write(result.content)
+            f.close()
+            print('contents of URL written to '+filename)
+        except:
+            print('requests.get() returned an error code '+str(result.status_code))
+
+
+class blurCube():
+    def __init__(self):
+        self.sigma_values = []
+        self.bands = None
+        self.center_wavelength = None
+        self.hico_image_edge = None
+        self.current_fwhm = []
+        self.new_fwhm = []
+        self.blurriest_fwhm = 3.5
+        self.sharpest_fwhm = 1.5
+
+    def blur_cube(self, sigma):
+        """
+            Blurs the cube in question
+
+            args:
+                The cube to be sharpened
+
+            Returns:
+                Blurred cube
+        """
+        for bands in self.cube:
+            fwhm = self.lsf.get_fwhm_val(self.cube[bands])
+            self.cube[bands] = cv2.GaussianBlur(self.cube[bands], (5, 5), sigma)
 
     def compare_fwhm(self, cube, desired_fwhm, sigma):
         # Calculate the actual FWHM
         actual_fwhm = self.blur_cube(cube, sigma)
 
-        # Chech if desired fwhm is larger than actual fwhm
-        if desired_fwhm < actual_fwhm:
-            while abs(actual_fwhm - desired_fwhm) > 0.03:
-                sigma += 0.1  # Increase sigma
-                actual_fwhm = self.blur_cube(cube, sigma)
-        elif desired_fwhm > actual_fwhm:
-            while abs(actual_fwhm - desired_fwhm) > 0.03:
-                sigma += 0.1 # Increase sigma
-                actual_fwhm = self.blur_cube(cube, sigma)
-        
+        # Check if desired fwhm is larger than actual fwhm
+        while abs(actual_fwhm - desired_fwhm) > 0.03:
+            sigma += 0.1  # Increase sigma
+            actual_fwhm = self.blur_cube(cube, sigma)
 
 
         return cube
@@ -69,67 +98,6 @@ class blurredCube:
 
         image_data = data['data']
         center_wavelength_data = image_data.sel(band=band_index)
-
-
-    def get_hico_images(self):
-        # do something
-        return self.cube
-    
-    def fwhm_calc(self):
-        self.cube.get_fwhm_val()
-            
-
-    def blur_cube(self, sigma):
-        """
-            Blurs the cube in question
-
-            args:
-                The cube to be sharpened
-
-            Returns:
-                Blurred cube
-        """
-        for bands in self.cube:
-            fwhm = self.lsf.get_fwhm_val(self.cube[bands])
-            self.cube[bands] = cv2.GaussianBlur(self.cube[bands], (5, 5), sigma)
-
-
-class hicodata:
-    def __init__(self):
-        files_folder = None
-        data = None
-        cube = []
-
-    # Example from NASAs website 
-    def get_hico_data_from_web(self):
-        # Set the URL string to point to a specific data URL. Some generic examples are:
-        #   https://data.gesdisc.earthdata.nasa.gov/data/MERRA2/path/to/granule.nc4
-
-        URL = 'https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Level-1B/HICO/2014/042/'
-
-        # Set the FILENAME string to the data file name, the LABEL keyword value, or any customized name. 
-        filename = 'your_file_string_goes_here'
-        result = requests.get(URL)
-        try:
-            result.raise_for_status()
-            f = open(filename,'wb')
-            f.write(result.content)
-            f.close()
-            print('contents of URL written to '+filename)
-        except:
-            print('requests.get() returned an error code '+str(result.status_code))
-
-
-class lsf():
-    def __init__(self):
-        self.sigma_values = []
-        self.bands = None
-        self.center_wavelength = None
-        self.hico_image_edge = None
-        self.current_fwhm = []
-        self.new_fwhm = []
-        self.blurriest_fwhm = 3.5 
-        self.sharpest_fwhm = 1.5
 
     def generate_desired_fwhm(self):
         if len(self.new_fwhm) == 0:
