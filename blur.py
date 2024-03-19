@@ -39,15 +39,15 @@ class hicoData:
 class blurCube():
     def __init__(self):
         self.sigma_values = []
-        self.bands = None
         self.center_wavelength = None
         self.hico_image_edge = None
         self.current_fwhm = []
         self.new_fwhm = []
         self.blurriest_fwhm = 3.5
         self.sharpest_fwhm = 1.5
+        self.calculated_sigma = []
 
-    def blur_cube(self, sigma):
+    def blur_cube(self, cube):
         """
             Blurs the cube in question
 
@@ -57,21 +57,22 @@ class blurCube():
             Returns:
                 Blurred cube
         """
-        for bands in self.cube:
-            fwhm = self.lsf.get_fwhm_val(self.cube[bands])
-            self.cube[bands] = cv2.GaussianBlur(self.cube[bands], (5, 5), sigma)
 
-    def compare_fwhm(self, cube, desired_fwhm, sigma):
-        # Calculate the actual FWHM
-        actual_fwhm = self.blur_cube(cube, sigma)
-
-        # Check if desired fwhm is larger than actual fwhm
-        while abs(actual_fwhm - desired_fwhm) > 0.03:
+        # Checks if sigma values are empty
+        if not self.calculated_sigma:
+            for i in range(cube.shape[2]/2):
+                sigma = 0.1
+                self.calculated_sigma.append(sigma)
+        
+        for i in range(cube.shape[2]):
+            fwhm = self.get_fwhm_val(self.cube[i])
+            if abs(fwhm - desired_fwhm) > 0.03:
             sigma += 0.1  # Increase sigma
-            actual_fwhm = self.blur_cube(cube, sigma)
+            self.cube[i] = cv2.GaussianBlur(self.cube[i], (5, 5), sigma)
 
+    def is_pairwise_matching(a, b):
+        return all(x == y for x, y in zip(a, b))
 
-        return cube
 
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
