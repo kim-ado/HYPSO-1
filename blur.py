@@ -38,14 +38,20 @@ class hicoData:
 
 class blurCube():
     def __init__(self):
-        self.sigma_values = []
-        self.center_wavelength = None
+        self.sbi = None
         self.hico_image_edge = None
+
         self.current_fwhm = []
-        self.new_fwhm = []
+        self.desired_fwhm = []
+
         self.blurriest_fwhm = 3.5
         self.sharpest_fwhm = 1.5
-        self.calculated_sigma = []
+
+        self.guessed_sigma = []
+        self.sigma_values = [] # Temp storage for sigma values to use in the GaussianBlur function
+
+        self.cube = None
+        self.blurred_cube = None
 
     def blur_cube(self, cube):
         """
@@ -57,22 +63,39 @@ class blurCube():
             Returns:
                 Blurred cube
         """
+        self.desired_fwhm = self.generate_desired_fwhm()
 
         # Checks if sigma values are empty
-        if not self.calculated_sigma:
+        if not self.guessed_sigma:
             for i in range(cube.shape[2]/2):
                 sigma = 0.1
-                self.calculated_sigma.append(sigma)
-        
+                self.guessed_sigma.append(sigma)
+
+        try:
+            if not self.edge:
+                self.edge = self.detect_sharpest_edge(cube[self.sbi]) # Finding the sharpest edge of the image at the center wavelength
+        except Exception as e:
+            print("Error occurred while detecting the sharpest edge:", str(e))
+
         for i in range(cube.shape[2]):
-            fwhm = self.get_fwhm_val(self.cube[i])
-            if abs(fwhm - desired_fwhm) > 0.03:
-            sigma += 0.1  # Increase sigma
-            self.cube[i] = cv2.GaussianBlur(self.cube[i], (5, 5), sigma)
+
+            fwhm = self.get_fwhm_val(self.cube[i], self.edge)
+            self.current_fwhm.append(fwhm)
+            cv2.gaussianBlur(self.cube[i], (5, 5), self.guessed_sigma[i])
+
+            while abs(self.is_pairwise_matching(self.current_fwhm[i], self.desired_fwhm[i])):
+                self.guessed_sigma[i] 
+
 
     def is_pairwise_matching(a, b):
         return all(x == y for x, y in zip(a, b))
-
+    
+    def gaussian_blur(self, cube, sigma):
+        """
+            Blurs the cube in question
+        """
+        cv2.gaussianBlur(cube, (5, 5), sigma)
+                
 
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
@@ -101,7 +124,7 @@ class blurCube():
         center_wavelength_data = image_data.sel(band=band_index)
 
     def generate_desired_fwhm(self):
-        if len(self.new_fwhm) == 0:
+        if len(self.desired_fwhm) == 0:
             self.parabole_func()
             print("Generated desired parabole FWHM curve")
         else:
@@ -109,16 +132,17 @@ class blurCube():
 
 
     def parabole_func(self):
-        a_1 = -2/((self.bands/2)**2)
-        for band_index in enumerate(self.bands):
+        bands = len(self.cube[2])
+        a_1 = -2/((bands/2)**2)
+        for band_index in enumerate(bands):
             if band_index == 0:
-                return self.new_fwhm.append(self.blurriest_fwhm)
-            elif band_index < self.bands/2:
-                self.new_fwhm.append(- (a_1) * (self.bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
-            elif (band_index > self.bands/2 and band_index < len(self.bands)):
-                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((self.bands)/2)^2 - len(self.bands))
-                b = self.blurriest_fwhm - a_2* ((self.bands)/2)**2
-                self.new_fwhm.append((a_2) * (self.bands/2) ** 2 + b)
+                return self.desired_fwhm.append(self.blurriest_fwhm)
+            elif band_index < bands/2:
+                self.desired_fwhm.append(- (a_1) * (bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
+            elif (band_index > bands/2 and band_index < len(bands)):
+                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)^2 - len(bands))
+                b = self.blurriest_fwhm - a_2* ((bands)/2)**2
+                self.desired_fwhm.append((a_2) * (bands/2) ** 2 + b)
 
     def detect_sharpest_edge(image):
         """
