@@ -54,22 +54,8 @@ class blurCube():
         self.blurred_cube = None
 
     def blur_cube(self, cube):
-        """
-            Blurs the cube in question
 
-            args:
-                The cube to be sharpened
-
-            Returns:
-                Blurred cube
-        """
         self.desired_fwhm = self.generate_desired_fwhm()
-
-        # Checks if sigma values are empty
-        if not self.guessed_sigma:
-            for i in range(cube.shape[2]/2):
-                sigma = 0.1
-                self.guessed_sigma.append(sigma)
 
         try:
             if not self.edge:
@@ -78,50 +64,29 @@ class blurCube():
             print("Error occurred while detecting the sharpest edge:", str(e))
 
         for i in range(cube.shape[2]):
+            
+            lower = 0.01
+            upper = 5.00
+            epsilon = 0.01
 
             fwhm = self.get_fwhm_val(self.cube[i], self.edge)
             self.current_fwhm.append(fwhm)
-            cv2.gaussianBlur(self.cube[i], (5, 5), self.guessed_sigma[i])
 
-            while abs(self.current_fwhm[i] - self.desired_fwhm[i])> 0.03 :
-                self.guessed_sigma[i] = 
+            while upper - lower > epsilon:
+                middle = (lower + upper) / 2
+                self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (5,5), sigma=middle)
+                fwhm = self.get_fwhm_val(self.blurred_cube[i], self.edge)
+                self.current_fwhm[i] = fwhm
 
+                if self.current_fwhm[i] > self.desired_fwhm[i]:
+                    upper = middle
+                else:
+                    lower = middle
 
-    def binary_search(self, arr, low, high, x):
+            final_sigma = (lower + upper) / 2
+            self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (5,5), sigma=final_sigma)
+            self.sigma_values.append(final_sigma)
     
-        # Check base case
-        if high >= low:
-    
-            mid = (high + low) // 2
-    
-            # If element is present at the middle itself
-            if arr[mid] == x:
-                return mid
-    
-            # If element is smaller than mid, then it can only
-            # be present in left subarray
-            elif arr[mid] > x:
-                return self.binary_search(arr, low, mid - 1, x)
-    
-            # Else the element can only be present in right subarray
-            else:
-                return self.binary_search(arr, mid + 1, high, x)
-    
-        else:
-            # Element is not present in the array
-            return -1
-
-    
-    def is_pairwise_matching(a, b):
-        return all(x == y for x, y in zip(a, b))
-    
-    def gaussian_blur(self, cube, sigma):
-        """
-            Blurs the cube in question
-        """
-        cv2.gaussianBlur(cube, (5, 5), sigma)
-                
-
     def get_cube(self) -> np.ndarray:
         """Get the raw data from the folder.
 
@@ -142,11 +107,7 @@ class blurCube():
         print(self.cube)
         data = xr.open.dataarray(self.path_to_np) / 50.0
         # Access the variable that contains the band wavelengths
-        band_wavelengths = data['wavelength']
-        band_index = (np.abs(band_wavelengths - self.sbi)).argmin()
-
-        image_data = data['data']
-        center_wavelength_data = image_data.sel(band=band_index)
+        print(data)
 
     def generate_desired_fwhm(self):
         if len(self.desired_fwhm) == 0:
