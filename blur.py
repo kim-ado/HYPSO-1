@@ -69,7 +69,7 @@ class blurCube():
             np.ndarray: The raw data.
         """
         # find file ending in .nc
-        for file in os.listdir(self.folder_name["folder_name"]):
+        for file in os.listdir(self.folder_name):
             if file.endswith("L1B_ISS"):
                 self.path_to_nc = os.path.join(
                     self.info["folder_name"], file)
