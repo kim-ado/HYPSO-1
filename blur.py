@@ -24,6 +24,8 @@ class blurCube():
         self.cube = None
         self.blurred_cube = None
 
+        self.folder_name = "hico_data"
+
     def blur_cube(self, cube):
 
         self.desired_fwhm = self.generate_desired_fwhm()
@@ -68,8 +70,8 @@ class blurCube():
         """
         # find file ending in .nc
         for file in os.listdir(self.folder_name["folder_name"]):
-            if file.endswith(".np"):
-                self.path_to_np = os.path.join(
+            if file.endswith("L1B_ISS"):
+                self.path_to_nc = os.path.join(
                     self.info["folder_name"], file)
                 break
 
@@ -78,7 +80,7 @@ class blurCube():
     
     def read_cube(self):
         print(self.cube)
-        data = xr.open.dataarray(self.path_to_np) / 50.0
+        data = xr.open.dataarray(self.path_to_nc) / 50.0
         # Access the variable that contains the band wavelengths
         print(data)
 
