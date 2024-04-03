@@ -9,7 +9,7 @@ import scipy.optimize as so
 
 class blurCube():
     def __init__(self):
-        self.sbi = None
+        self.sbi = 753
         self.hico_image_edge = None
 
         self.current_fwhm = []
