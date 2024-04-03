@@ -310,6 +310,10 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
             for filename in flist:
                 filelist.append(os.path.expandvars(filename.rstrip()))
 
+    if not len(filelist):
+        parser.print_usage()
+        sys.exit("Please provide a filename, URL, or list file to retrieve")
+
     if args.uncompress and args.checksum:
         parser.print_usage()
         sys.exit("--uncompress is incompatible with --checksum")
