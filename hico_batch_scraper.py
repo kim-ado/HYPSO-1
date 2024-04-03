@@ -33,33 +33,6 @@ import bz2
 # Call the function to download all files in url
 #===============================================================================
 
-#BatchJob(Files, cookie_jar) # Comment out to prevent downloading to your working directory
-
-class hicoData:
-    def __init__(self):
-        self.folder_name = "C:/Users/Kim/Documents/master/HYPSO-1/hico_data"
-        self.files = None
-        self.sbi = 750 # The center wavelength of the band of interest
-
-    # Example from NASAs website 
-    def get_hico_data_from_web(self):
-        # Set the URL string to point to a specific data URL. Some generic examples are:
-        #   https://data.gesdisc.earthdata.nasa.gov/data/MERRA2/path/to/granule.nc4
-
-        URL = 'https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Level-1B/HICO/2014/042/'
-
-        # Set the FILENAME string to the data file name, the LABEL keyword value, or any customized name. 
-        filename = 'your_file_string_goes_here'
-        result = requests.get(URL)
-        try:
-            result.raise_for_status()
-            f = open(filename,'wb')
-            f.write(result.content)
-            f.close()
-            print('contents of URL written to '+filename)
-        except:
-            print('requests.get() returned an error code '+str(result.status_code))
-
 # Define a custom HTML parser to scrape the contents of the HTML data table
 class MyHTMLParser(HTMLParser):
     def __init__(self):
@@ -84,10 +57,6 @@ class MyHTMLParser(HTMLParser):
                         self.lasttag = tag
                         if value.endswith('/'):  # Check if the link is a subdirectory
                             self.dataList.append(value)  # Store the subdirectory
-    def reset_state(self):
-        self.inLink = False
-        self.dataList = []
-        self.Counter = 0
                     
     def handle_endtag(self, tag):
             if tag == 'table':
@@ -97,6 +66,11 @@ class MyHTMLParser(HTMLParser):
         if self.Counter == 1:
             if self.lasttag == 'a' and self.inLink and data.strip():
                 self.dataList.append(data)
+
+    def reset_state(self):
+        self.inLink = False
+        self.dataList = []
+        self.Counter = 0
         
 
 # Define function for batch downloading
