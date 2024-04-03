@@ -289,7 +289,16 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
 
     filelist = []
 
-    if args.url:
+    if args.http_manifest:
+        status = retrieveURL(args.http_manifest, verbose=args.verbose, force_download=True, appkey=args.appkey)
+        if status:
+            print("There was a problem retrieving %s (received status %d)" % (args.http_manifest, status))
+            sys.exit("Bailing out...")
+        else:
+            with open('http_manifest.txt') as flist:
+                for filename in flist:
+                    filelist.append(filename.rstrip())
+    elif args.url:
         subdirs = get_subdirs(args.url, args.num_subdirs)
         for subdir in subdirs:
             bz2_files = get_bz2_files(subdir)
@@ -301,25 +310,9 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
             for filename in flist:
                 filelist.append(os.path.expandvars(filename.rstrip()))
 
-    if args.http_manifest:
-        status = retrieveURL(args.http_manifest,verbose=args.verbose,force_download=True,appkey=args.appkey)
-        if status:
-            print("There was a problem retrieving %s (received status %d)" % (args.http_manifest,status))
-            sys.exit("Bailing out...")
-        else:
-            with open('http_manifest.txt') as flist:
-                for filename in flist:
-                    filelist.append(filename.rstrip())
-    elif args.filename:
-        filelist.append(args.filename)
-    elif args.filelist:
-        with open(os.path.expandvars(args.filelist)) as flist:
-            for filename in flist:
-                filelist.append(os.path.expandvars(filename.rstrip()))
-
     if not len(filelist):
         parser.print_usage()
-        sys.exit("Please provide a filename (or list file) to retrieve")
+        sys.exit("Please provide a filename, URL, or list file to retrieve")
 
     if args.uncompress and args.checksum:
         parser.print_usage()
