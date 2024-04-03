@@ -80,9 +80,9 @@ class blurCube():
     
     def read_cube(self):
         print(self.cube)
-        data = xr.open.dataarray(self.path_to_nc) / 50.0
+        self.cube = xr.open.dataarray(self.path_to_nc) / 50.0
         # Access the variable that contains the band wavelengths
-        print(data)
+        print(self.cube)
 
     def generate_desired_fwhm(self):
         if len(self.desired_fwhm) == 0:
