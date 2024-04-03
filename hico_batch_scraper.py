@@ -235,6 +235,16 @@ def retrieveURL(request,localpath='.', uncompress=False, verbose=0,force_downloa
 
     return status
 
+def get_subdirs(url, num_subdirs):
+    response = requests.get(url)
+    subdirs = re.findall(r'<a href="(\d+/)">', response.text)[:num_subdirs]
+    return [url + subdir for subdir in subdirs]
+
+def get_bz2_files(url):
+    response = requests.get(url)
+    bz2_files = re.findall(r'<a href="(.*\.bz2)">', response.text)
+    return [url + bz2_file for bz2_file in bz2_files]
+
 if __name__ == "__main__":
     # parse command line
     parser = argparse.ArgumentParser(
@@ -273,9 +283,23 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
     parser.add_argument('--force',action='store_true',
                         help='force download even if file already exists locally',
                         default=False)
+    parser.add_argument('--url', help='URL of the directory containing subdirectories with .bz2 files')
+    parser.add_argument('--num_subdirs', type=int, default=5, help='Number of top subdirectories to download from')
     args = parser.parse_args()
 
     filelist = []
+
+    if args.url:
+        subdirs = get_subdirs(args.url, args.num_subdirs)
+        for subdir in subdirs:
+            bz2_files = get_bz2_files(subdir)
+            filelist.extend(bz2_files)
+    elif args.filename:
+        filelist.append(args.filename)
+    elif args.filelist:
+        with open(os.path.expandvars(args.filelist)) as flist:
+            for filename in flist:
+                filelist.append(os.path.expandvars(filename.rstrip()))
 
     if args.http_manifest:
         status = retrieveURL(args.http_manifest,verbose=args.verbose,force_download=True,appkey=args.appkey)
@@ -326,3 +350,4 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
 
     if failed:
         failed.close()
+
