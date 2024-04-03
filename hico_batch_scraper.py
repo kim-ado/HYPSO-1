@@ -309,8 +309,7 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
         with open(os.path.expandvars(args.filelist)) as flist:
             for filename in flist:
                 filelist.append(os.path.expandvars(filename.rstrip()))
-
-    if not len(filelist):
+    else:
         parser.print_usage()
         sys.exit("Please provide a filename, URL, or list file to retrieve")
 
@@ -343,4 +342,3 @@ NOTE: For authentication, a valid .netrc file in the user home ($HOME) directory
 
     if failed:
         failed.close()
-
