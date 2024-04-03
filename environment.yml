@@ -25,3 +25,5 @@ dependencies:
   - python-kaleido>=0.2.1
   - PyWavelets>=1.4.1
   - pytorch
+  - netcd4
+  - xarray
