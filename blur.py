@@ -80,7 +80,7 @@ class blurCube():
     
     def read_cube(self):
         print(self.cube)
-        self.cube = xr.open.dataset(self.path_to_nc) / 50.0
+        self.cube = xr.open_dataset(self.path_to_nc) / 50.0
         # Access the variable that contains the band wavelengths
         print(self.cube)
 
