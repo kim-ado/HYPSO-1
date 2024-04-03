@@ -72,7 +72,7 @@ class blurCube():
         for file in os.listdir(self.folder_name):
             if file.endswith("L1B_ISS"):
                 self.path_to_nc = os.path.join(
-                    self.folder_name["folder_name"], file)
+                    self.folder_name, file)
                 break
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
