@@ -121,7 +121,7 @@ def BatchJob(Files, cookie_jar):
 
 # The user credentials that will be used to authenticate access to the data
 username = "kimado"
-password = "password"
+password = "&82m%wPhE8-9.C+"
 
 # The FULL url of the directory which contains the files you would like to bulk download
 url = "https://oceandata.sci.gsfc.nasa.gov/directdataaccess/Level-1B/HICO/2014" # Example URL
