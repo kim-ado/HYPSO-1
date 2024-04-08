@@ -84,8 +84,7 @@ class blurCube():
         print(self.cube)
         self.cube = xr.open_dataset(self.path_to_nc, engine='netcdf4') / 50.0
         f = nc.Dataset(self.path_to_nc, 'r')
-        for group_name in ['data', 'images', 'metadata', 'navigation', 'products', 'quality']:
-            print(f[group_name])
+        print(f)
         # Access the variable that contains the band wavelengths
         print(self.cube)
 
