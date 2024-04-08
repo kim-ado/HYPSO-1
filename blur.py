@@ -87,7 +87,6 @@ class blurCube():
         print("printing nc. way:", f)
         # Access the variable that contains the band wavelengths
         print("printing self.cube after xarray stuff: ", self.cube)
-        print("xarray test stuff: ", self.cube['wavelength'])
 
     def generate_desired_fwhm(self):
         if len(self.desired_fwhm) == 0:
