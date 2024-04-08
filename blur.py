@@ -5,6 +5,7 @@ import xarray as xr
 import numpy as np
 import scipy.interpolate as si
 import scipy.optimize as so
+import netCDF4 as nc            
 
 
 class blurCube():
@@ -62,7 +63,7 @@ class blurCube():
             self.blurred_cube[-i] = cv2.GaussianBlur(self.cube[-i], (5,5), sigma=final_sigma[i])
         
     
-    def get_cube(self) -> np.ndarray:
+    def get_cube(self):
         """Get the raw data from the folder.
 
         Returns:
@@ -73,6 +74,7 @@ class blurCube():
             if file.endswith("L1B_ISS"):
                 self.path_to_nc = os.path.join(
                     self.folder_name, file)
+                print(self.path_to_nc)
                 break
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
@@ -80,7 +82,9 @@ class blurCube():
     
     def read_cube(self):
         print(self.cube)
-        self.cube = xr.open_dataset(self.path_to_nc) / 50.0
+        self.cube = xr.open_dataset(self.path_to_nc, engine='netcdf4') / 50.0
+        f = nc.Dataset(self.path_to_nc, 'r')
+        print(f)
         # Access the variable that contains the band wavelengths
         print(self.cube)
 
