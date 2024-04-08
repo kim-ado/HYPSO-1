@@ -81,12 +81,13 @@ class blurCube():
 
     
     def read_cube(self):
-        print(self.cube)
+        print("init cube: ", self.cube)
         self.cube = xr.open_dataset(self.path_to_nc, engine='netcdf4') / 50.0
         f = nc.Dataset(self.path_to_nc, 'r')
-        print(f)
+        print("printing nc. way:", f)
         # Access the variable that contains the band wavelengths
-        print(self.cube)
+        print("printing self.cube after xarray stuff: ", self.cube)
+        print("xarray test stuff: ", self.cube['wavelength'])
 
     def generate_desired_fwhm(self):
         if len(self.desired_fwhm) == 0:
