@@ -143,11 +143,11 @@ class blurCube():
         bands = self.bands
         a_1 = -2/((bands/2)**2)
         for band in bands:
-            if band_index == 0:
+            if band == 0:
                 return self.desired_fwhm.append(self.blurriest_fwhm)
-            elif band_index < bands/2:
+            elif band < bands/2:
                 self.desired_fwhm.append(- (a_1) * (bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
-            elif (band_index > bands/2 and band_index < len(bands)):
+            elif (band > bands/2 and band < len(bands)):
                 a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)^2 - len(bands))
                 b = self.blurriest_fwhm - a_2* ((bands)/2)**2
                 self.desired_fwhm.append((a_2) * (bands/2) ** 2 + b)
