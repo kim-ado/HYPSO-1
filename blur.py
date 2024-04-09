@@ -140,7 +140,7 @@ class blurCube():
             elif band < bands/2:
                 self.desired_fwhm.append(- (a_1) * (bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
             elif (band > bands/2 and band < bands):
-                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)**2 - len(bands))
+                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)**2 - bands)
                 b = self.blurriest_fwhm - a_2* ((bands)/2)**2
                 self.desired_fwhm.append((a_2) * (bands/2) ** 2 + b)
         print(self.desired_fwhm)
