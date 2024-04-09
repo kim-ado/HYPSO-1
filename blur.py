@@ -138,11 +138,9 @@ class blurCube():
             if band == 0:
                 self.desired_fwhm.append(self.blurriest_fwhm)
             elif band < bands/2:
-                self.desired_fwhm.append(- (a_1) * (bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
-            elif (band > bands/2 and band < bands):
-                a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)**2 - bands)
-                b = self.blurriest_fwhm - a_2* ((bands)/2)**2
-                self.desired_fwhm.append((a_2) * (bands/2) ** 2 + b)
+                self.desired_fwhm.append(-a_1 * (band - bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
+            elif (band >= bands/2 and band < bands):
+                self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
         print(self.desired_fwhm)
 
     def detect_sharpest_edge(image):
