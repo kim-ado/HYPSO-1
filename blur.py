@@ -76,7 +76,7 @@ class blurCube():
             if file.endswith(".nc"):
                 self.path_to_nc = os.path.join(
                     self.folder_name, file)
-                print(self.path_to_nc)
+                print("File accessed: ", self.path_to_nc)
                 break
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
@@ -85,30 +85,49 @@ class blurCube():
     def read_cube(self):
         f = nc.Dataset(self.path_to_nc, 'r')
 
-        ds = xr.open_dataset(self.path_to_nc, group='navigation')
-        #print(f.dimensions['bands'].size)
         # Open the 'products' group
-        ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
+        self.cube = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
 
         # Access the 'Lt' variable
-        Lt = ds['Lt']
+        print(f)
+
+        Lt = self.cube['Lt']
+
+        print("Lt var attribute: ", Lt)
 
         # Access the wavelengths
         wavelengths = Lt.attrs['wavelengths']
+        fwhm = Lt.attrs['fwhm']
+
+        # Apply the slope value to transform the 'Lt' data to appropriate units
+        slope = 0.02  # The slope value mentioned in the documentation
+        Lt_corrected = Lt * slope
+
+        # Assign the attributes from the original 'Lt' DataArray to the new 'Lt_corrected' DataArray
+        Lt_corrected.attrs = Lt.attrs
+
+        # Now, Lt_corrected contains the data transformed to appropriate units and the original attributes
+        #print("Corrected Lt data: ", Lt_corrected)
+
+        # Access the wavelengths again after applying the slope value
+        #wavelengths_corrected = Lt_corrected.attrs['wavelengths']
+        #print("Corrected wavelengths: ", wavelengths_corrected)
+        
+        #for val in wavelengths:
+        #    print(val)
+        self.bands = len(wavelengths)
 
         # Print the first wavelength
-        print('First wavelength:', wavelengths[40])
+        #print('First wavelength:', wavelengths[40])
+        
+        #print(len(wavelengths))
+       
 
         # Select the image data for the first band
-        image_data = Lt.sel(bands=40) * 0.02
-
+        #image_data = Lt.sel(bands=40) * 0.02
         # Print the image data for the first wavelength
-        print(f'Image data for first wavelength {wavelengths[40]}: {image_data}')
-        
-        plt.imshow(image_data)
-        plt.colorbar(label=Lt.units)
-        plt.title(f'Image data for first wavelength {wavelengths[0]} nm')
-        plt.show()
+        #print(f'Image data for first wavelength {wavelengths[40]}: {image_data}')
+
 
         
 
@@ -121,9 +140,9 @@ class blurCube():
 
 
     def parabole_func(self):
-        bands = len(self.cube[2])
+        bands = self.bands
         a_1 = -2/((bands/2)**2)
-        for band_index in enumerate(bands):
+        for band in bands:
             if band_index == 0:
                 return self.desired_fwhm.append(self.blurriest_fwhm)
             elif band_index < bands/2:
@@ -132,6 +151,7 @@ class blurCube():
                 a_2 = -((self.sharpest_fwhm-self.blurriest_fwhm)/((bands)/2)^2 - len(bands))
                 b = self.blurriest_fwhm - a_2* ((bands)/2)**2
                 self.desired_fwhm.append((a_2) * (bands/2) ** 2 + b)
+        print(self.desired_fwhm)
 
     def detect_sharpest_edge(image):
         """
