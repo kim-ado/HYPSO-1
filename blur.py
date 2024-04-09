@@ -5,7 +5,9 @@ import xarray as xr
 import numpy as np
 import scipy.interpolate as si
 import scipy.optimize as so
-import netCDF4 as nc            
+import netCDF4 as nc
+import matplotlib.pyplot as plt
+
 
 
 class blurCube():
@@ -71,7 +73,7 @@ class blurCube():
         """
         # find file ending in .nc
         for file in os.listdir(self.folder_name):
-            if file.endswith("L1B_ISS"):
+            if file.endswith(".nc"):
                 self.path_to_nc = os.path.join(
                     self.folder_name, file)
                 print(self.path_to_nc)
@@ -81,13 +83,29 @@ class blurCube():
 
     
     def read_cube(self):
-        print("init cube: ", self.cube)
-        print("filename", self.path_to_nc)
-        self.cube = xr.open_dataset(self.path_to_nc) / 50.0
         f = nc.Dataset(self.path_to_nc, 'r')
-        print("printing nc. way:", f)
-        # Access the variable that contains the band wavelengths
-        print("printing self.cube after xarray stuff: ", self.cube)
+
+        ds = xr.open_dataset(self.path_to_nc, group='navigation')
+        #print(f.dimensions['bands'].size)
+        # Open the 'products' group
+        ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
+
+        # Access the 'Lt' variable
+        Lt = ds['Lt']
+
+        # Access the wavelengths
+        wavelengths = Lt.attrs['wavelengths']
+
+        # Print the first wavelength
+        print('First wavelength:', wavelengths[0])
+
+        # Select the image data for the first band
+        image_data = Lt.sel(bands=0)
+
+        # Print the image data for the first wavelength
+        print(f'Image data for first wavelength {wavelengths[0]}: {image_data}')
+
+        
 
     def generate_desired_fwhm(self):
         if len(self.desired_fwhm) == 0:
