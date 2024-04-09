@@ -97,13 +97,18 @@ class blurCube():
         wavelengths = Lt.attrs['wavelengths']
 
         # Print the first wavelength
-        print('First wavelength:', wavelengths[0])
+        print('First wavelength:', wavelengths[40])
 
         # Select the image data for the first band
-        image_data = Lt.sel(bands=0)
+        image_data = Lt.sel(bands=40) * 0.02
 
         # Print the image data for the first wavelength
-        print(f'Image data for first wavelength {wavelengths[0]}: {image_data}')
+        print(f'Image data for first wavelength {wavelengths[40]}: {image_data}')
+        
+        plt.imshow(image_data)
+        plt.colorbar(label=Lt.units)
+        plt.title(f'Image data for first wavelength {wavelengths[0]} nm')
+        plt.show()
 
         
 
