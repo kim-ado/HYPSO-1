@@ -31,7 +31,7 @@ class blurCube():
 
     def blur_cube(self, cube):
 
-        self.desired_fwhm = self.generate_desired_fwhm()
+        self.desired_fwhm = self.parabole_func()
 
         try:
             if not self.edge:
@@ -83,21 +83,21 @@ class blurCube():
 
     
     def read_cube(self):
-        f = nc.Dataset(self.path_to_nc, 'r')
+        #f = nc.Dataset(self.path_to_nc, 'r')
 
         # Open the 'products' group
         self.cube = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
 
         # Access the 'Lt' variable
-        print(f)
+        #print(f)
 
         Lt = self.cube['Lt']
 
-        print("Lt var attribute: ", Lt)
+        #print("Lt var attribute: ", Lt)
 
         # Access the wavelengths
-        wavelengths = Lt.attrs['wavelengths']
-        fwhm = Lt.attrs['fwhm']
+        self.wavelengths = Lt.attrs['wavelengths']
+        #fwhm = Lt.attrs['fwhm']
 
         # Apply the slope value to transform the 'Lt' data to appropriate units
         slope = 0.02  # The slope value mentioned in the documentation
@@ -105,6 +105,8 @@ class blurCube():
 
         # Assign the attributes from the original 'Lt' DataArray to the new 'Lt_corrected' DataArray
         Lt_corrected.attrs = Lt.attrs
+
+
 
         # Now, Lt_corrected contains the data transformed to appropriate units and the original attributes
         #print("Corrected Lt data: ", Lt_corrected)
@@ -115,7 +117,7 @@ class blurCube():
         
         #for val in wavelengths:
         #    print(val)
-        self.bands = len(wavelengths)
+        self.bands = len(self.wavelengths)
 
         # Print the first wavelength
         #print('First wavelength:', wavelengths[40])
@@ -124,14 +126,14 @@ class blurCube():
        
 
         # Select the image data for the first band
-        #image_data = Lt.sel(bands=40) * 0.02
+        image_data = Lt.sel(bands=40) * 0.02
         # Print the image data for the first wavelength
-        #print(f'Image data for first wavelength {wavelengths[40]}: {image_data}')
+        print(f'Image data for first wavelength {self.wavelengths[40]}: {image_data}')
 
 
         
 
-    def parabole_func(self):
+    def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
         bands = self.bands
         a_1 = -2/((bands/2)**2)
         for band in range(bands):  # Iterate over the range of bands
