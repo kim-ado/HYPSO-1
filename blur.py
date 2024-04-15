@@ -126,7 +126,7 @@ class blurCube():
        
 
         # Select the image data for the first band
-        image_data = Lt.sel(bands=40) * 0.02
+        image_data = Lt_corrected.sel(bands=40) * 0.02
         # Print the image data for the first wavelength
         print(f'Image data for first wavelength {self.wavelengths[40]}: {image_data}')
 
