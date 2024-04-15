@@ -9,10 +9,10 @@ import netCDF4 as nc
 import matplotlib.pyplot as plt
 
 
-
 class blurCube():
     def __init__(self):
         self.sbi = 753
+        self.wavelengths = 0
         self.hico_image_edge = None
 
         self.current_fwhm = []
@@ -29,28 +29,31 @@ class blurCube():
 
         self.folder_name = "hico_data"
 
-    def blur_cube(self, cube):
+    def set_sharpest_base_index(self, sbi):
+        self.sbi = sbi
+
+    def blur_cube(self):
 
         self.desired_fwhm = self.parabole_func()
 
         try:
             if not self.edge:
-                self.edge = self.detect_sharpest_edge(cube[self.sbi]) # Finding the sharpest edge of the image at the center wavelength
+                self.edge = self.detect_sharpest_edge(self.cube.sel(bands=self.sbi)) # Finding the sharpest edge of the image at the center wavelength
         except Exception as e:
             print("Error occurred while detecting the sharpest edge:", str(e))
 
-        for i in range(cube.shape[2]/2):
+        for i in range(self.wavelengths):
             
             lower = 0.01
             upper = 5.00
             epsilon = 0.01
 
-            fwhm = self.get_fwhm_val(self.cube[i], self.edge)
+            fwhm = self.get_fwhm_val(self.cube.sel(bands=i), self.edge)
             self.current_fwhm.append(fwhm)
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (5,5), sigma=middle)
+                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i), (5,5), sigma=middle)
                 fwhm = self.get_fwhm_val(self.blurred_cube[i], self.edge)
                 self.current_fwhm[i] = fwhm
 
@@ -61,7 +64,7 @@ class blurCube():
 
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
-            self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (5,5), sigma=final_sigma[i])
+            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i), (5,5), sigma=final_sigma[i])
             self.blurred_cube[-i] = cv2.GaussianBlur(self.cube[-i], (5,5), sigma=final_sigma[i])
         
     
@@ -84,54 +87,17 @@ class blurCube():
     
     def read_cube(self):
         #f = nc.Dataset(self.path_to_nc, 'r')
-
-        # Open the 'products' group
-        self.cube = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
-
-        # Access the 'Lt' variable
-        #print(f)
-
-        Lt = self.cube['Lt']
-
-        #print("Lt var attribute: ", Lt)
-
-        # Access the wavelengths
+        ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
+        Lt = ds['Lt']
         self.wavelengths = Lt.attrs['wavelengths']
-        #fwhm = Lt.attrs['fwhm']
 
-        # Apply the slope value to transform the 'Lt' data to appropriate units
         slope = 0.02  # The slope value mentioned in the documentation
         Lt_corrected = Lt * slope
 
-        # Assign the attributes from the original 'Lt' DataArray to the new 'Lt_corrected' DataArray
-        Lt_corrected.attrs = Lt.attrs
-
-
-
-        # Now, Lt_corrected contains the data transformed to appropriate units and the original attributes
-        #print("Corrected Lt data: ", Lt_corrected)
-
-        # Access the wavelengths again after applying the slope value
-        #wavelengths_corrected = Lt_corrected.attrs['wavelengths']
-        #print("Corrected wavelengths: ", wavelengths_corrected)
-        
-        #for val in wavelengths:
-        #    print(val)
         self.bands = len(self.wavelengths)
-
-        # Print the first wavelength
-        #print('First wavelength:', wavelengths[40])
         
-        #print(len(wavelengths))
-       
+        self.cube = Lt_corrected.values
 
-        # Select the image data for the first band
-        image_data = Lt_corrected.sel(bands=40) * 0.02
-        # Print the image data for the first wavelength
-        print(f'Image data for first wavelength {self.wavelengths[40]}: {image_data}')
-
-
-        
 
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
         bands = self.bands
