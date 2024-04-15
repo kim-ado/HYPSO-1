@@ -26,6 +26,7 @@ class blurCube():
 
         self.cube = None
         self.blurred_cube = None
+        self.edge = None
 
         self.folder_name = "hico_data"
 
@@ -42,19 +43,19 @@ class blurCube():
         except Exception as e:
             print("Error occurred while detecting the sharpest edge:", str(e))
 
-        for i in range(self.wavelengths):
+        for i in range(len(self.wavelengths)):
             
             lower = 0.01
             upper = 5.00
             epsilon = 0.01
 
-            fwhm = self.get_fwhm_val(self.cube.sel(bands=i), self.edge)
+            fwhm = self.get_fwhm_val(self.edge)
             self.current_fwhm.append(fwhm)
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
                 self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i), (5,5), sigma=middle)
-                fwhm = self.get_fwhm_val(self.blurred_cube[i], self.edge)
+                fwhm = self.get_fwhm_val(self.edge)
                 self.current_fwhm[i] = fwhm
 
                 if self.current_fwhm[i] > self.desired_fwhm[i]:
@@ -96,7 +97,7 @@ class blurCube():
 
         self.bands = len(self.wavelengths)
         
-        self.cube = Lt_corrected.values
+        self.cube = Lt_corrected
 
 
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
