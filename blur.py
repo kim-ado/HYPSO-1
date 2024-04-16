@@ -35,7 +35,7 @@ class blurCube():
         self.desired_fwhm = self.parabole_func()
 
         if self.edge is None:
-            self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96)) # Finding the sharpest edge of the image at the center wavelength
+            self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96).values) # Finding the sharpest edge of the image at the center wavelength
             print("image data: ", self.cube.sel(bands=self.sbi))
             print("edge: ", self.edge)
 
@@ -50,7 +50,7 @@ class blurCube():
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i), (5,5), sigma=middle)
+                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=middle)
                 fwhm = self.get_fwhm_val(self.edge)
                 self.current_fwhm[i] = fwhm
 
@@ -61,8 +61,8 @@ class blurCube():
 
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
-            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i), (5,5), sigma=final_sigma[i])
-            self.blurred_cube[-i] = cv2.GaussianBlur(self.cube[-i], (5,5), sigma=final_sigma[i])
+            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=final_sigma[i])
+            self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (5,5), sigma=final_sigma[i])
         
     
     def get_cube(self):
@@ -93,7 +93,7 @@ class blurCube():
 
         self.bands = len(self.wavelengths)
         
-        self.cube = Lt_corrected.values
+        self.cube = Lt_corrected
 
 
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
