@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 class blurCube():
     def __init__(self):
-        self.sbi = 753
+        self.sbi = 96
         self.wavelengths = 0
         self.hico_image_edge = None
 
@@ -30,18 +30,14 @@ class blurCube():
 
         self.folder_name = "hico_data"
 
-    def set_sharpest_base_index(self, sbi):
-        self.sbi = sbi
-
     def blur_cube(self):
 
         self.desired_fwhm = self.parabole_func()
 
-        try:
-            if not self.edge:
-                self.edge = self.detect_sharpest_edge(self.cube.sel(bands=self.sbi)) # Finding the sharpest edge of the image at the center wavelength
-        except Exception as e:
-            print("Error occurred while detecting the sharpest edge:", str(e))
+        if self.edge is None:
+            self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96)) # Finding the sharpest edge of the image at the center wavelength
+            print("image data: ", self.cube.sel(bands=self.sbi))
+            print("edge: ", self.edge)
 
         for i in range(len(self.wavelengths)):
             
@@ -97,7 +93,7 @@ class blurCube():
 
         self.bands = len(self.wavelengths)
         
-        self.cube = Lt_corrected
+        self.cube = Lt_corrected.values
 
 
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
@@ -112,13 +108,12 @@ class blurCube():
                 self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
         print(self.desired_fwhm)
 
-    def detect_sharpest_edge(image):
+    def detect_sharpest_edge(self, image):
         """
             Detect the sharpest edge of the image.
         """
-        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gradient_x = cv2.Sobel(grayscale_image, cv2.CV_64F, 1, 0, ksize=5)
-        gradient_y = cv2.Sobel(grayscale_image, cv2.CV_64F, 0, 1, ksize=5)
+        gradient_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=5)
+        gradient_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=5)
         gradient_magnitude = np.sqrt(gradient_x**2 + gradient_y**2)
         max_gradient = np.max(gradient_magnitude)
         sharpest_edge = np.where(gradient_magnitude == max_gradient)
