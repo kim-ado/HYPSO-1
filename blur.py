@@ -112,20 +112,41 @@ class blurCube():
         """
             Detect the sharpest edge of the image.
         """
-        gradient_x = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=5)
-        gradient_y = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=5)
-        gradient_magnitude = np.sqrt(gradient_x**2 + gradient_y**2)
-        max_gradient = np.max(gradient_magnitude)
-        sharpest_edge = np.where(gradient_magnitude == max_gradient)
+        image = cv2.convertScaleAbs(image)
+        
+        edges = cv2.Canny(image, 50, 150, apertureSize=3)
 
-        # Get the first and last coordinates of the sharpest edge
-        x_coords, y_coords = sharpest_edge
-        first_point = (x_coords[0], y_coords[0])
-        last_point = (x_coords[-1], y_coords[-1])
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
 
-        return first_point, last_point
+        # If no lines were found, return None
+        if lines is None:
+            return None, None
+        
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            length = np.hypot(x2 - x1, y2 - y1)
+            if length > 5:
+                return (x1, y1), (x2, y2)
 
+        return None, None
 
+    def visualize_cube(self):
+        # Assuming 'cube' is your xarray Dataset
+        R = self.cube.sel(bands=42).values
+        G = self.cube.sel(bands=27).values
+        B = self.cube.sel(bands=11).values
+
+        # Stack the R, G, B bands to create a 3D array (image)
+        rgb_image = np.dstack((R, G, B))
+
+        # Normalize the image to the range [0, 1] because matplotlib expects values in this range
+        rgb_image = rgb_image / np.max(rgb_image)
+
+        # Display the image
+        plt.imshow(rgb_image)
+        plt.show()
+
+    
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
 
