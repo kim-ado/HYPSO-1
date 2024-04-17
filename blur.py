@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 
 class blurCube():
     def __init__(self):
-        self.sbi = 96
+        self.sbi = 96 #Highest band index that is not trash
+        self.mbi = 9 #Lowest band index that is not trash
+
         self.wavelengths = 0
         self.hico_image_edge = None
 
@@ -36,6 +38,8 @@ class blurCube():
 
         if self.edge is None:
             self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96).values) # Finding the sharpest edge of the image at the center wavelength
+
+        print(self.cube.sel(bands=96).values)
         """
         
         for i in range(len(self.wavelengths)):
@@ -105,7 +109,6 @@ class blurCube():
                 self.desired_fwhm.append(-a_1 * (band - bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
             elif (band >= bands/2 and band < bands):
                 self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
-        print(self.desired_fwhm)
 
     def detect_sharpest_edge(self, image):
         """
@@ -124,12 +127,7 @@ class blurCube():
             return None, None
         
         for line in lines:
-            x1, y1, x2, y2 = line[0]
-            length = np.hypot(x2 - x1, y2 - y1)
-            if length > 5:
-                return (x1, y1), (x2, y2)
-
-        return None, None
+            
 
     def visualize_cube(self):
         # Assuming 'cube' is your xarray Dataset
