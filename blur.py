@@ -118,7 +118,13 @@ class blurCube():
         max_gradient = np.max(gradient_magnitude)
         sharpest_edge = np.where(gradient_magnitude == max_gradient)
 
-        return sharpest_edge
+        # Get the first and last coordinates of the sharpest edge
+        x_coords, y_coords = sharpest_edge
+        first_point = (x_coords[0], y_coords[0])
+        last_point = (x_coords[-1], y_coords[-1])
+
+        return first_point, last_point
+
 
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
