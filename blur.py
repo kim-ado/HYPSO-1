@@ -36,9 +36,8 @@ class blurCube():
 
         if self.edge is None:
             self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96).values) # Finding the sharpest edge of the image at the center wavelength
-            print("image data: ", self.cube.sel(bands=self.sbi))
-            print("edge: ", self.edge)
-
+        """
+        
         for i in range(len(self.wavelengths)):
             
             lower = 0.01
@@ -63,7 +62,7 @@ class blurCube():
             self.sigma_values.append(final_sigma)
             self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=final_sigma[i])
             self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (5,5), sigma=final_sigma[i])
-        
+        """
     
     def get_cube(self):
         """Get the raw data from the folder.
@@ -112,13 +111,15 @@ class blurCube():
         """
             Detect the sharpest edge of the image.
         """
-        image = cv2.convertScaleAbs(image)
-        
+        image = self.cube.sel(bands=96).values - np.min(self.cube.sel(bands=96).values)  # Shift the range so that it starts from 0
+        image = self.cube.sel(bands=96).values / np.max(self.cube.sel(bands=96).values)  # Normalize to the range [0, 1]
+        image = (self.cube.sel(bands=96).values * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
+
         edges = cv2.Canny(image, 50, 150, apertureSize=3)
 
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
-
-        # If no lines were found, return None
+        
+        print("lines:", lines)   
         if lines is None:
             return None, None
         
@@ -138,12 +139,15 @@ class blurCube():
 
         # Stack the R, G, B bands to create a 3D array (image)
         rgb_image = np.dstack((R, G, B))
-
+        
+        image = self.cube.sel(bands=96).values - np.min(self.cube.sel(bands=96).values)  # Shift the range so that it starts from 0
+        image = self.cube.sel(bands=96).values / np.max(self.cube.sel(bands=96).values)  # Normalize to the range [0, 1]
+        image = (self.cube.sel(bands=96).values * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
         # Normalize the image to the range [0, 1] because matplotlib expects values in this range
         rgb_image = rgb_image / np.max(rgb_image)
 
         # Display the image
-        plt.imshow(rgb_image)
+        plt.imshow(image)
         plt.show()
 
     
