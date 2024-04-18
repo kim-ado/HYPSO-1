@@ -39,7 +39,6 @@ class blurCube():
         if self.edge is None:
             self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96).values) # Finding the sharpest edge of the image at the center wavelength
 
-        print(self.cube.sel(bands=96).values)
         """
         
         for i in range(len(self.wavelengths)):
@@ -99,35 +98,35 @@ class blurCube():
         self.cube = Lt_corrected
 
 
-    def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
-        bands = self.bands
-        a_1 = -2/((bands/2)**2)
-        for band in range(bands):  # Iterate over the range of bands
-            if band == 0:
-                self.desired_fwhm.append(self.blurriest_fwhm)
-            elif band < bands/2:
-                self.desired_fwhm.append(-a_1 * (band - bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
-            elif (band >= bands/2 and band < bands):
-                self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
-
     def detect_sharpest_edge(self, image):
         """
             Detect the sharpest edge of the image.
         """
-        image = self.cube.sel(bands=96).values - np.min(self.cube.sel(bands=96).values)  # Shift the range so that it starts from 0
-        image = self.cube.sel(bands=96).values / np.max(self.cube.sel(bands=96).values)  # Normalize to the range [0, 1]
-        image = (self.cube.sel(bands=96).values * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
+        image = self.cube.sel(bands=96).values
+        image = image - np.min(image)  # Shift the range so that it starts from 0
+        image = image / np.max(image)  # Normalize to the range [0, 1]
+        image = (image * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
 
         edges = cv2.Canny(image, 50, 150, apertureSize=3)
 
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
         
-        print("lines:", lines)   
         if lines is None:
             return None, None
         
+        long_lines = []
         for line in lines:
-            
+            x1, y1, x2, y2 = line[0]
+            length = np.hypot(x2 - x1, y2 - y1)
+            if length > 8 and y1 == y2:
+                long_lines.append(line)
+
+        # Replace 'lines' with the filtered list
+        lines = long_lines
+
+        for line in lines:
+            print("line:", line)
+        
 
     def visualize_cube(self):
         # Assuming 'cube' is your xarray Dataset
@@ -138,15 +137,69 @@ class blurCube():
         # Stack the R, G, B bands to create a 3D array (image)
         rgb_image = np.dstack((R, G, B))
         
-        image = self.cube.sel(bands=96).values - np.min(self.cube.sel(bands=96).values)  # Shift the range so that it starts from 0
-        image = self.cube.sel(bands=96).values / np.max(self.cube.sel(bands=96).values)  # Normalize to the range [0, 1]
-        image = (self.cube.sel(bands=96).values * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
-        # Normalize the image to the range [0, 1] because matplotlib expects values in this range
-        rgb_image = rgb_image / np.max(rgb_image)
+        image = self.cube.sel(bands=96).values
+        image = image - np.min(image)  # Shift the range so that it starts from 0
+        image = image / np.max(image)  # Normalize to the range [0, 1]
+        image = (image * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
 
-        # Display the image
-        plt.imshow(image)
+        # Normalize the image to the range [0, 1] because matplotlib expects values in this range
+        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+
+        edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
+
+        # Detect lines using Hough Line Transform
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=20)
+
+        # Filter the lines
+        vertical_lines = []
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+            if x1 == x2 and 15 <= length <= 20:  # Horizontal line with length between 6 and 10
+                vertical_lines.append(line)
+                print("line:", line)
+
+
+        line_image = np.zeros_like(image)
+
+        rgb_image_with_lines = np.copy(rgb_image)
+
+        for line in vertical_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
+
+        for line in vertical_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+
+        plt.subplot(1, 3, 1)
+        plt.imshow(rgb_image)
+        plt.title('Original RGB Image')
+
+        # Display the image with the lines
+        plt.subplot(1, 3, 2)
+        plt.imshow(line_image, cmap='gray')
+        plt.title('Image with Lines')
+
+        # Display the RGB image with the lines
+        plt.subplot(1, 3, 3)
+        plt.imshow(rgb_image_with_lines)
+        plt.title('RGB Image with Lines')
+
         plt.show()
+
+
+    def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
+        bands = self.bands
+        a_1 = -2/((bands/2)**2)
+        for band in range(bands):  # Iterate over the range of bands
+            if band == 0:
+                self.desired_fwhm.append(self.blurriest_fwhm)
+            elif band < bands/2:
+                self.desired_fwhm.append(-a_1 * (band - bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
+            elif (band >= bands/2 and band < bands):
+                self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
 
     
     def func(x, a, b, c, d):
