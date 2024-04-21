@@ -129,11 +129,7 @@ class blurCube():
         
 
     def visualize_cube(self):
-<<<<<<< HEAD
-        
-=======
         # Assuming 'cube' is your xarray Dataset
->>>>>>> 94c69f7ae1db749facfdd6ec394931c91ebb165a
         R = self.cube.sel(bands=42).values
         G = self.cube.sel(bands=27).values
         B = self.cube.sel(bands=11).values
@@ -155,16 +151,6 @@ class blurCube():
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=20)
 
         # Filter the lines
-<<<<<<< HEAD
-        horizontal_lines = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-            if y1 == y2 and 15 <= length <= 30:  # Horizontal line with length between 15 and 30
-                horizontal_lines.append(line)
-                print("line:", line)
-
-=======
         vertical_lines = []
         for line in lines:
             x1, y1, x2, y2 = line[0]
@@ -174,24 +160,15 @@ class blurCube():
                 print("line:", line)
 
 
->>>>>>> 94c69f7ae1db749facfdd6ec394931c91ebb165a
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
 
-<<<<<<< HEAD
-        for line in horizontal_lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
-
-        for line in horizontal_lines:
-=======
         for line in vertical_lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
 
         for line in vertical_lines:
->>>>>>> 94c69f7ae1db749facfdd6ec394931c91ebb165a
             x1, y1, x2, y2 = line[0]
             cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
