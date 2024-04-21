@@ -36,7 +36,9 @@ class blurCube():
 
     def blur_cube(self):
 
-        self.desired_fwhm = self.parabole_func()
+        self.parabole_func()
+
+        print("Desired FWHM: ", self.desired_fwhm)
         
         for i in range(len(self.wavelengths)):
             
