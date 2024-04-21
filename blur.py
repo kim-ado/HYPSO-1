@@ -51,7 +51,7 @@ class blurCube():
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=middle)
+                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
                 fwhm = self.get_fwhm_val(self.edge)
                 self.current_fwhm[i] = fwhm
                 print("current fwhm: ", self.current_fwhm[i])
@@ -63,8 +63,8 @@ class blurCube():
 
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
-            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=final_sigma[i])
-            self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (5,5), sigma=final_sigma[i])
+            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=final_sigma[i])
+            self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=final_sigma[i])
     
     def get_cube(self):
         """Get the raw data from the folder.
