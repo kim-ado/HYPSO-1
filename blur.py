@@ -28,8 +28,8 @@ class blurCube():
         self.guessed_sigma = []
         self.sigma_values = [] # Temp storage for sigma values to use in the GaussianBlur function
 
-        self.cube = None
-        self.blurred_cube = None
+        self.cube = []
+        self.blurred_cube = []
         self.edge = None
 
         self.folder_name = "hico_data"
@@ -46,6 +46,8 @@ class blurCube():
 
             fwhm = self.get_fwhm_val(self.edge)
             self.current_fwhm.append(fwhm)
+            # Initialize the blurred cube
+            self.blurred_cube.append(self.cube.sel(bands=i).values)
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
@@ -164,10 +166,10 @@ class blurCube():
         point2 = (line[3], line[2])  # (y2, x2)
 
         # Get the pixel intensity values along the line
-        self.edge = self.convert_coordinates_to_intensity_values(image, point1, point2)
+        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, point1, point2)
 
         print("Edge:", self.edge)
-
+        """
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
@@ -197,7 +199,7 @@ class blurCube():
 
         plt.show()
 
-
+        """
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
         bands = self.bands
         a_1 = -2/((bands/2)**2)
@@ -230,6 +232,7 @@ class blurCube():
         return image_edge
 
     
+    @staticmethod
     def func(x, a, b, c, d):
         return a/(1+np.exp((x-b)/c)) + d
 
