@@ -7,6 +7,8 @@ import scipy.interpolate as si
 import scipy.optimize as so
 import netCDF4 as nc
 import matplotlib.pyplot as plt
+from skimage.measure import profile_line
+
 
 
 class blurCube():
@@ -35,11 +37,6 @@ class blurCube():
     def blur_cube(self):
 
         self.desired_fwhm = self.parabole_func()
-
-        if self.edge is None:
-            self.edge = self.detect_sharpest_edge(self.cube.sel(bands=96).values) # Finding the sharpest edge of the image at the center wavelength
-
-        """
         
         for i in range(len(self.wavelengths)):
             
@@ -55,6 +52,7 @@ class blurCube():
                 self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=middle)
                 fwhm = self.get_fwhm_val(self.edge)
                 self.current_fwhm[i] = fwhm
+                print("current fwhm: ", self.current_fwhm[i])
 
                 if self.current_fwhm[i] > self.desired_fwhm[i]:
                     upper = middle
@@ -65,7 +63,6 @@ class blurCube():
             self.sigma_values.append(final_sigma)
             self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (5,5), sigma=final_sigma[i])
             self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (5,5), sigma=final_sigma[i])
-        """
     
     def get_cube(self):
         """Get the raw data from the folder.
@@ -148,7 +145,7 @@ class blurCube():
         edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
 
         # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=20)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=15, minLineLength=6, maxLineGap=20)
 
         # Filter the lines
         horizontal_lines = []
@@ -158,6 +155,16 @@ class blurCube():
             if y1 == y2 and 15 <= length <= 30:  # Horizontal line with length between 15 and 30
                 horizontal_lines.append(line)
                 print("line:", line)
+
+        # Get the line at index 0
+        line = horizontal_lines[0][0]
+
+        # Get the endpoints of the line
+        point1 = (line[1], line[0])  # (y1, x1)
+        point2 = (line[3], line[2])  # (y2, x2)
+
+        # Get the pixel intensity values along the line
+        self.edge = self.convert_coordinates_to_intensity_values(image, point1, point2)
 
         line_image = np.zeros_like(image)
 
@@ -200,23 +207,23 @@ class blurCube():
             elif (band >= bands/2 and band < bands):
                 self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
 
-    def convert_edge_to_intensity_values(self, edge):
+    def convert_coordinates_to_intensity_values(self, image, point1, point2):
         """Convert the edge to intensity values.
 
         Parameters
         ----------
-        edge : array
-            The edge of the image.
+        image : 2D array
+            The image.
+        point1, point2 : tuple
+            The endpoints of the line.
 
         Returns
         -------
         image_edge : array
             The intensity values of the edge.
         """
-
-        # Normalize the edge to the range [0, 1]
-        image_edge = edge - np.min(edge)
-        image_edge = image_edge / np.max(image_edge)
+        # Extract the pixel intensity values along the line
+        image_edge = profile_line(image, point1, point2)
 
         return image_edge
 
