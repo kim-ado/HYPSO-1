@@ -166,6 +166,8 @@ class blurCube():
         # Get the pixel intensity values along the line
         self.edge = self.convert_coordinates_to_intensity_values(image, point1, point2)
 
+        print("Edge:", self.edge)
+
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
