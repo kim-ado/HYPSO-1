@@ -151,24 +151,23 @@ class blurCube():
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=20)
 
         # Filter the lines
-        vertical_lines = []
+        horizontal_lines = []
         for line in lines:
             x1, y1, x2, y2 = line[0]
             length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-            if x1 == x2 and 15 <= length <= 20:  # Horizontal line with length between 6 and 10
-                vertical_lines.append(line)
+            if y1 == y2 and 15 <= length <= 30:  # Horizontal line with length between 15 and 30
+                horizontal_lines.append(line)
                 print("line:", line)
-
 
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
 
-        for line in vertical_lines:
+        for line in horizontal_lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
 
-        for line in vertical_lines:
+        for line in horizontal_lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
@@ -200,6 +199,26 @@ class blurCube():
                 self.desired_fwhm.append(-a_1 * (band - bands/2) ** 2 + self.sharpest_fwhm) # using the parabole function
             elif (band >= bands/2 and band < bands):
                 self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
+
+    def convert_edge_to_intensity_values(self, edge):
+        """Convert the edge to intensity values.
+
+        Parameters
+        ----------
+        edge : array
+            The edge of the image.
+
+        Returns
+        -------
+        image_edge : array
+            The intensity values of the edge.
+        """
+
+        # Normalize the edge to the range [0, 1]
+        image_edge = edge - np.min(edge)
+        image_edge = image_edge / np.max(image_edge)
+
+        return image_edge
 
     
     def func(x, a, b, c, d):
