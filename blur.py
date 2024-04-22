@@ -158,10 +158,10 @@ class blurCube():
             length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
             if y1 == y2 and 15 <= length <= 30:  # Horizontal line with length between 15 and 30
                 horizontal_lines.append(line)
-                print("line:", line)
 
         # Get the line at index 0
         line = horizontal_lines[0][0]
+        print("line:", line)
 
         # Get the endpoints of the line
         point1 = (line[1], line[0])  # (y1, x1)
