@@ -167,6 +167,8 @@ class blurCube():
         point1 = (line[1], line[0])  # (y1, x1)
         point2 = (line[3], line[2])  # (y2, x2)
 
+
+        self.line = line
         # Get the pixel intensity values along the line
         self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, point1, point2)
 
