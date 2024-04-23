@@ -46,15 +46,19 @@ class blurCube():
             upper = 5.00
             epsilon = 0.01
 
+            self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
             fwhm = self.get_fwhm_val(self.edge)
+
             self.current_fwhm.append(fwhm)
-            # Initialize the blurred cube
             self.blurred_cube.append(self.cube.sel(bands=i).values)
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
                 self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
+
+                self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
+                
                 self.current_fwhm[i] = fwhm
                 print("current fwhm: ", self.current_fwhm[i])
 
@@ -163,14 +167,11 @@ class blurCube():
         line = horizontal_lines[0][0]
         print("line:", line)
 
-        # Get the endpoints of the line
-        point1 = (line[1], line[0])  # (y1, x1)
-        point2 = (line[3], line[2])  # (y2, x2)
-
-
+        # Saving the coordinates of the line
         self.line = line
+
         # Get the pixel intensity values along the line
-        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, point1, point2)
+        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, self.line)
 
         print("Edge:", self.edge)
         """
@@ -215,7 +216,7 @@ class blurCube():
             elif (band >= bands/2 and band < bands):
                 self.desired_fwhm.append(-a_1 * ((bands - band) - bands/2) ** 2 + self.sharpest_fwhm)
 
-    def convert_coordinates_to_intensity_values(self, image, point1, point2):
+    def convert_coordinates_to_intensity_values(self, image, line):
         """Convert the edge to intensity values.
 
         Parameters
@@ -230,6 +231,11 @@ class blurCube():
         image_edge : array
             The intensity values of the edge.
         """
+
+        # Get the endpoints of the line
+        point1 = (line[1], line[0])  # (y1, x1)
+        point2 = (line[3], line[2])  # (y2, x2)
+
         # Extract the pixel intensity values along the line
         image_edge = profile_line(image, point1, point2)
 
