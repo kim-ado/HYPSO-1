@@ -40,7 +40,7 @@ class blurCube():
 
         print("Desired FWHM: ", self.desired_fwhm)
         
-        for i in range(self.bands):
+        for i in range(self.mbi, self.sbi):
             
             lower = 0.01
             upper = 5.00
@@ -51,27 +51,31 @@ class blurCube():
             print("Initial fwhm: ", fwhm)
 
             self.current_fwhm.append(fwhm)
-            self.blurred_cube = np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values)
+            self.blurred_cube = xr.DataArray(
+                data=np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values),
+                coords=self.cube.isel(bands=slice(self.mbi, self.sbi)).coords,
+                dims=self.cube.isel(bands=slice(self.mbi, self.sbi)).dims
+            )
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube[::i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
+                self.blurred_cube.isel(bands=i-9).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
 
                 self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
                 
-                self.current_fwhm[i] = fwhm
-                print("current fwhm: ", self.current_fwhm[i])
+                self.current_fwhm[i-self.mbi] = fwhm
+                print("current fwhm: ", self.current_fwhm[i-self.mbi])
 
-                if self.current_fwhm[i] > self.desired_fwhm[i]:
+                if self.current_fwhm[i] > self.desired_fwhm[i-self.mbi]:
                     upper = middle
                 else:
                     lower = middle
 
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
-            self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=final_sigma[i])
-            self.blurred_cube[-i] = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=final_sigma[i])
+            self.blurred_cube.isel(bands=i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=final_sigma[i])
+            self.blurred_cube.isel(bands=-i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=final_sigma[i])
     
     def get_cube(self):
         """Get the raw data from the folder.
