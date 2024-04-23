@@ -40,7 +40,7 @@ class blurCube():
 
         print("Desired FWHM: ", self.desired_fwhm)
         
-        for i in range(len(self.wavelengths)):
+        for i in range(self.bands):
             
             lower = 0.01
             upper = 5.00
@@ -48,13 +48,14 @@ class blurCube():
 
             self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
             fwhm = self.get_fwhm_val(self.edge)
+            print("Initial fwhm: ", fwhm)
 
             self.current_fwhm.append(fwhm)
-            self.blurred_cube.append(self.cube.sel(bands=i).values)
+            self.blurred_cube = np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values)
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube[i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
+                self.blurred_cube[::i] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
 
                 self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
@@ -98,7 +99,9 @@ class blurCube():
         slope = 0.02  # The slope value mentioned in the documentation
         Lt_corrected = Lt * slope
 
-        self.bands = len(self.wavelengths)
+        self.bands = len(self.wavelengths[self.mbi:self.sbi])
+
+        print("Bands: ", self.bands)
         
         self.cube = Lt_corrected
 
