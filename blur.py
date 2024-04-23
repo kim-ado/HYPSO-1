@@ -61,13 +61,13 @@ class blurCube():
                 middle = (lower + upper) / 2
                 self.blurred_cube.isel(bands=i-9).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
 
-                self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
+                self.edge = self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-9).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
                 
                 self.current_fwhm[i-self.mbi] = fwhm
                 print("current fwhm: ", self.current_fwhm[i-self.mbi])
 
-                if self.current_fwhm[i] > self.desired_fwhm[i-self.mbi]:
+                if self.current_fwhm[i-self.mbi] > self.desired_fwhm[i-self.mbi]:
                     upper = middle
                 else:
                     lower = middle
