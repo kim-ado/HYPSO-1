@@ -58,7 +58,6 @@ class blurCube():
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
                 self.blurred_cube.loc[dict(bands=i-9)] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
-                print(self.blurred_cube.isel(bands=i-9).values)
 
                 self.edge = self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-9).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
