@@ -102,6 +102,7 @@ class blurCube():
         Lt_corrected = Lt * slope
 
         self.bands = len(self.wavelengths[self.mbi:self.sbi])
+        self.wavelengths = self.wavelengths[self.mbi:self.sbi]
 
         print("Bands: ", self.bands)
         
