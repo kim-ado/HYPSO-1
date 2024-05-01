@@ -168,6 +168,7 @@ class blurCube():
             length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
             if y1 == y2 and 15 <= length <= 30:  # Horizontal line with length between 15 and 30
                 horizontal_lines.append(line)
+                print("line: ", line)
 
         # Get the line at index 0
         line = horizontal_lines[0][0]
@@ -180,7 +181,7 @@ class blurCube():
         self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, self.line)
 
         print("Edge:", self.edge)
-        """
+        
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
@@ -210,7 +211,7 @@ class blurCube():
 
         plt.show()
 
-        """
+        
     def parabole_func(self): # Fra index 9 til index 95 ettersom at det er litt dårlig
         bands = self.bands
         a_1 = -2/((bands/2)**2)
