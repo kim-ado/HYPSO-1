@@ -49,7 +49,9 @@ class blurCube():
             self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
             fwhm = self.get_fwhm_val(self.edge)
             print("Initial fwhm: ", fwhm)
-
+            mtf_fwhm = self.find_fwhm(self.cube.sel(bands=i).values)
+            print("MTFtester: ", mtf_fwhm)
+            """
             self.current_fwhm.append(fwhm)
             self.blurred_cube = xr.DataArray(
                 data=np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values),
@@ -76,8 +78,8 @@ class blurCube():
             self.sigma_values.append(final_sigma)
             self.blurred_cube.isel(bands=i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
             self.blurred_cube.isel(bands=-i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
-    
-    def find_fwhm(image):
+            """
+    def find_fwhm(self, image):
 
         # Crop the image using the rectangle coordinates
         cropped_image = image[325:350, 1320:1330]
