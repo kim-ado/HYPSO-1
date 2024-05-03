@@ -12,6 +12,7 @@ from skimage.measure import profile_line
 
 
 
+
 class blurCube():
     def __init__(self):
         self.sbi = 97 #Highest band index that is not trash
@@ -205,9 +206,32 @@ class blurCube():
 
         print("Edge:", self.edge)
 
+
+        # Calculate the length of the horizontal line
+        length = int(np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
+
+        # Calculate the midpoint of the horizontal line
+        midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
+
+
+        # Define the start and end points of the vertical line
+        # The y-coordinates are 0 and the height of the image, and the x-coordinate is the midpoint of the horizontal line
+        vertical_line = (midpoint[0], midpoint[1] - length // 2, midpoint[0], midpoint[1] + length // 2)
+
+        # Saving the coordinates of the line
+        #self.line = vertical_line
+        self.line = [260, 532, 260, 538]
+
+        # Get the pixel intensity values along the vertical line
+        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, vertical_line)
+
+        print("Edge:", self.edge)
+        
         for line in horizontal_lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
+            cv2.line(line_image, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 255, 255), 2)
+
             cv2.line(line_image, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 255, 255), 2)
 
 
@@ -216,7 +240,7 @@ class blurCube():
             cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
             cv2.line(rgb_image_with_lines, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 0, 0), 2)
 
-
+        """
         plt.subplot(1, 3, 1)
         plt.imshow(rgb_image)
         plt.title('Original RGB Image')
@@ -230,8 +254,24 @@ class blurCube():
         plt.subplot(1, 3, 3)
         plt.imshow(rgb_image_with_lines)
         plt.title('RGB Image with Lines')
+        """
+        # Display the image with the lines
+        plt.subplot(1, 3, 1)
+        plt.imshow(self.cube.sel(bands=64).values, cmap='gray')
+        plt.title('Band 64, Initial fwhm:  1.4294294294294296')
+
+        plt.subplot(1, 3, 2)
+        plt.imshow(self.cube.sel(bands=65).values, cmap='gray')
+        plt.title('Original RGB Image: Initial fwhm:  0.8108108108108114')
+
+        # Display the image with the lines
+        plt.subplot(1, 3, 3)
+        plt.imshow(self.cube.sel(bands=69).values, cmap='gray')
+        plt.title('Image with Lines, Initial fwhm:  0.24024024024024015')
+        
 
         plt.show()
+        
 
 
         
