@@ -118,7 +118,7 @@ class blurCube():
         print("Bands: ", self.bands)
         
         self.cube = Lt_corrected
-
+        
 
     def detect_sharpest_edge(self, image):
         """
@@ -133,21 +133,12 @@ class blurCube():
 
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
         
-        if lines is None:
-            return None, None
+        self.line = [260, 532, 260, 538] # Manuelle koordinater for en vertikal linje
         
-        long_lines = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            length = np.hypot(x2 - x1, y2 - y1)
-            if length > 8 and y1 == y2:
-                long_lines.append(line)
+        # Get the pixel intensity values along the vertical line
+        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, self.line)
 
-        # Replace 'lines' with the filtered list
-        lines = long_lines
-
-        for line in lines:
-            print("line:", line)
+        print("Edge:", self.edge)
         
 
     def visualize_cube(self):
@@ -170,17 +161,21 @@ class blurCube():
         edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
 
         # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=30)
-        
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=15)
+
         # Filter the lines
         horizontal_lines = []
         for line in lines:
-            x1, y1, x2, y2 = line
+            x1, y1, x2, y2 = line[0]
             length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
             if y1 == y2 and 10 <= length <= 30:  # Horizontal line with length between 15 and 30
                 horizontal_lines.append(line)
                 print("line: ", line)
 
+        # Get the line at index 0
+        line = horizontal_lines[3][0]
+        print("line:", line)
+        
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
@@ -191,21 +186,17 @@ class blurCube():
         # Calculate the midpoint of the horizontal line
         midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
 
+
         # Define the start and end points of the vertical line
         # The y-coordinates are 0 and the height of the image, and the x-coordinate is the midpoint of the horizontal line
         vertical_line = (midpoint[0], midpoint[1] - length // 2, midpoint[0], midpoint[1] + length // 2)
 
         # Saving the coordinates of the line
-        self.line = vertical_line
-
-        # Get the pixel intensity values along the vertical line
-        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, vertical_line)
-
-        print("Edge:", self.edge)
-
         #self.line = vertical_line
-        self.line = [260, 532, 260, 538]
-
+        self.line = [280, 790, 280, 797]
+        
+        vertical_line = self.line
+    
         # Get the pixel intensity values along the vertical line
         self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, vertical_line)
 
@@ -216,15 +207,13 @@ class blurCube():
             cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
             cv2.line(line_image, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 255, 255), 2)
 
-            cv2.line(line_image, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 255, 255), 2)
-
 
         for line in horizontal_lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
             cv2.line(rgb_image_with_lines, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 0, 0), 2)
 
-        """
+        
         plt.subplot(1, 3, 1)
         plt.imshow(rgb_image)
         plt.title('Original RGB Image')
@@ -252,10 +241,9 @@ class blurCube():
         plt.subplot(1, 3, 3)
         plt.imshow(self.cube.sel(bands=69).values, cmap='gray')
         plt.title('Image with Lines, Initial fwhm:  0.24024024024024015')
-        
+        """
 
         plt.show()
-        
 
 
     def parabole_func(self):
