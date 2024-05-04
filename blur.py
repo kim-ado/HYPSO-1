@@ -15,7 +15,7 @@ from skimage.measure import profile_line
 
 class blurCube():
     def __init__(self):
-        self.sbi = 97 #Highest band index that is not trash
+        self.sbi = 96 #Highest band index that is not trash
         self.mbi = 9 #Lowest band index that is not trash
 
         self.wavelengths = 0
@@ -25,7 +25,7 @@ class blurCube():
         self.desired_fwhm = []
 
         self.blurriest_fwhm = 3.5
-        self.sharpest_fwhm = 1.5
+        self.sharpest_fwhm = 1.38
 
         self.guessed_sigma = []
         self.sigma_values = [] # Temp storage for sigma values to use in the GaussianBlur function
@@ -49,9 +49,9 @@ class blurCube():
             self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
             fwhm = self.get_fwhm_val(self.edge)
             print("Initial fwhm: ", fwhm)
-            mtf_fwhm = self.find_fwhm(self.cube.sel(bands=i).values)
-            print("MTFtester: ", mtf_fwhm)
-            """
+            print("Band index: ", i)
+            print("Desired fwhm: ", self.desired_fwhm[i-self.mbi])
+            
             self.current_fwhm.append(fwhm)
             self.blurred_cube = xr.DataArray(
                 data=np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values),
@@ -78,13 +78,13 @@ class blurCube():
             self.sigma_values.append(final_sigma)
             self.blurred_cube.isel(bands=i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
             self.blurred_cube.isel(bands=-i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
-            """
+            
     def find_fwhm(self, image):
 
         # Crop the image using the rectangle coordinates
-        cropped_image = image[325:350, 1320:1330]
+        cropped_image = image[382:360, 1000:1150]
 
-        mtf.mtf_estimator_algorithm.Mtf(cropped_image)
+        mtf.Mtf(cropped_image)
 
     def get_cube(self):
         """Get the raw data from the folder.
@@ -170,8 +170,8 @@ class blurCube():
         edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
 
         # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=20)
-
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=15)
+        
         # Filter the lines
         horizontal_lines = []
         for line in lines:
@@ -182,15 +182,15 @@ class blurCube():
                 print("line: ", line)
 
         # Get the line at index 0
-        line = horizontal_lines[4][0]
+        line = horizontal_lines[3][0]
         print("line:", line)
-        
+
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
 
         # Calculate the length of the horizontal line
-        length = int(np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2)) + 10
+        length = int(np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
 
         # Calculate the midpoint of the horizontal line
         midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
@@ -276,7 +276,6 @@ class blurCube():
         
 
 
-        
     def parabole_func(self):
         bands = self.bands
         a_1 = 4 * (self.blurriest_fwhm - self.sharpest_fwhm) / ((bands - 1) ** 2)
