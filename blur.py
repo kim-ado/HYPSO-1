@@ -170,7 +170,7 @@ class blurCube():
         edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
 
         # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=15)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=5, minLineLength=6, maxLineGap=50)
         
         # Filter the lines
         horizontal_lines = []
@@ -181,10 +181,6 @@ class blurCube():
                 horizontal_lines.append(line)
                 print("line: ", line)
 
-        # Get the line at index 0
-        line = horizontal_lines[3][0]
-        print("line:", line)
-
         line_image = np.zeros_like(image)
 
         rgb_image_with_lines = np.copy(rgb_image)
@@ -194,7 +190,6 @@ class blurCube():
 
         # Calculate the midpoint of the horizontal line
         midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
-
 
         # Define the start and end points of the vertical line
         # The y-coordinates are 0 and the height of the image, and the x-coordinate is the midpoint of the horizontal line
@@ -208,19 +203,6 @@ class blurCube():
 
         print("Edge:", self.edge)
 
-
-        # Calculate the length of the horizontal line
-        length = int(np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
-
-        # Calculate the midpoint of the horizontal line
-        midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
-
-
-        # Define the start and end points of the vertical line
-        # The y-coordinates are 0 and the height of the image, and the x-coordinate is the midpoint of the horizontal line
-        vertical_line = (midpoint[0], midpoint[1] - length // 2, midpoint[0], midpoint[1] + length // 2)
-
-        # Saving the coordinates of the line
         #self.line = vertical_line
         self.line = [260, 532, 260, 538]
 
