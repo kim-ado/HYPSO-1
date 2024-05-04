@@ -170,7 +170,7 @@ class blurCube():
         edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
 
         # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=5, minLineLength=6, maxLineGap=50)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=30)
         
         # Filter the lines
         horizontal_lines = []
