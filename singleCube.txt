@@ -1,1 +1,1 @@
-https://oceandata.sci.gsfc.nasa.gov/getfile/H2014064000912.L1B_ISS.nc
+https://oceandata.sci.gsfc.nasa.gov/hico/getfile/H2010342050003.L1B_ISS.nc

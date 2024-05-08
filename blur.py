@@ -25,16 +25,27 @@ class blurCube():
         self.desired_fwhm = []
 
         self.blurriest_fwhm = 3.5
-        self.sharpest_fwhm = 1.38
+        self.sharpest_fwhm = 1.5
 
         self.guessed_sigma = []
-        self.sigma_values = [] # Temp storage for sigma values to use in the GaussianBlur function
+        self.sigma_values = [] # Final sigma values
+
+        self.final_fwhm = []
+        self.initial_fwhm = []
 
         self.cube = []
         self.blurred_cube = []
         self.edge = None
 
         self.folder_name = "hico_data"
+
+    def blur_cubes(self):
+
+        self.get_cubes()
+
+        for paths in self.paths_to_nc:
+            self.path_to_nc = paths
+            self.read_cube()
 
     def blur_cube(self):
 
@@ -43,11 +54,12 @@ class blurCube():
         for i in range(self.mbi, self.sbi):
             
             lower = 0.01
-            upper = 5.00
-            epsilon = 0.01
+            upper = 3.00
+            epsilon = 0.02
 
             self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
             fwhm = self.get_fwhm_val(self.edge)
+            self.initial_fwhm.append(fwhm)
             print("Initial fwhm: ", fwhm)
             print("Band index: ", i)
             print("Desired fwhm: ", self.desired_fwhm[i-self.mbi])
@@ -61,13 +73,11 @@ class blurCube():
 
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
-                self.blurred_cube.loc[dict(bands=i-9)] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
-
-                self.edge = self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-9).values, self.line)
+                blurred_band = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
+                self.blurred_cube.loc[dict(bands=i-self.mbi)] = blurred_band
+                self.edge = self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-self.mbi).values, self.line)
                 fwhm = self.get_fwhm_val(self.edge)
-                
                 self.current_fwhm[i-self.mbi] = fwhm
-                print("current fwhm: ", self.current_fwhm[i-self.mbi])
 
                 if self.current_fwhm[i-self.mbi] > self.desired_fwhm[i-self.mbi]:
                     upper = middle
@@ -76,15 +86,27 @@ class blurCube():
 
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
-            self.blurred_cube.isel(bands=i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
-            self.blurred_cube.isel(bands=-i-self.mbi).values = cv2.GaussianBlur(self.cube.sel(bands=-i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
-            
-    def find_fwhm(self, image):
+            self.blurred_cube.loc[dict(bands=i-self.mbi)] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
+            self.final_fwhm.append(self.get_fwhm_val(self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-self.mbi).values, self.line)))
 
-        # Crop the image using the rectangle coordinates
-        cropped_image = image[382:360, 1000:1150]
+    def get_cubes(self):
+        """Get the raw data from the folder.
 
-        mtf.Mtf(cropped_image)
+        Returns:
+            list: The list of paths to the raw data files.
+        """
+        # Initialize an empty list to store the paths to the .nc files
+        self.paths_to_nc = []
+
+        # Find files ending in .nc
+        for file in os.listdir(self.folder_name):
+            if file.endswith(".nc"):
+                # Append the path to the .nc file to the list
+                self.paths_to_nc.append(os.path.join(self.folder_name, file))
+                print("File accessed: ", os.path.join(self.folder_name, file))
+
+        # Return the list of paths to the .nc files
+        return self.paths_to_nc
 
     def get_cube(self):
         """Get the raw data from the folder.
@@ -102,7 +124,7 @@ class blurCube():
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
 
-    
+
     def read_cube(self):
         #f = nc.Dataset(self.path_to_nc, 'r')
         ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
@@ -133,7 +155,7 @@ class blurCube():
 
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
         
-        self.line = [260, 532, 260, 538] # Manuelle koordinater for en vertikal linje
+        self.line = [214, 701, 214, 692] # Manuelle koordinater for en vertikal linje
         
         # Get the pixel intensity values along the vertical line
         self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, self.line)
@@ -142,6 +164,8 @@ class blurCube():
         
 
     def visualize_cube(self):
+        import matplotlib.patches as patches
+
         # Assuming 'cube' is your xarray Dataset
         R = self.cube.sel(bands=42).values
         G = self.cube.sel(bands=27).values
@@ -155,96 +179,66 @@ class blurCube():
         image = image / np.max(image)  # Normalize to the range [0, 1]
         image = (image * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
 
-        # Normalize the image to the range [0, 1] because matplotlib expects values in this range
-        blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+        # Your existing code
+        self.line = [110, 830, 110, 823]
+        center_x = self.line[0] + (self.line[2] - self.line[0]) // 2
+        center_y = self.line[1] + (self.line[3] - self.line[1]) // 2
+        zoomed_image = rgb_image[center_y-10:center_y+10, center_x-10:center_x+10]
 
-        edges = cv2.Canny(blurred_image, 50, 150, apertureSize=3)
-
-        # Detect lines using Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=10, minLineLength=6, maxLineGap=15)
-
-        # Filter the lines
-        horizontal_lines = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-            if y1 == y2 and 10 <= length <= 30:  # Horizontal line with length between 15 and 30
-                horizontal_lines.append(line)
-                print("line: ", line)
-
-        # Get the line at index 0
-        line = horizontal_lines[3][0]
-        print("line:", line)
-        
-        line_image = np.zeros_like(image)
-
-        rgb_image_with_lines = np.copy(rgb_image)
-
-        # Calculate the length of the horizontal line
-        length = int(np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
-
-        # Calculate the midpoint of the horizontal line
-        midpoint = ((line[0] + line[2]) // 2, (line[1] + line[3]) // 2)
-
-
-        # Define the start and end points of the vertical line
-        # The y-coordinates are 0 and the height of the image, and the x-coordinate is the midpoint of the horizontal line
-        vertical_line = (midpoint[0], midpoint[1] - length // 2, midpoint[0], midpoint[1] + length // 2)
-
-        # Saving the coordinates of the line
-        #self.line = vertical_line
-        self.line = [280, 790, 280, 797]
-        
-        vertical_line = self.line
-    
-        # Get the pixel intensity values along the vertical line
-        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, vertical_line)
-
-        print("Edge:", self.edge)
-        
-        for line in horizontal_lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(line_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
-            cv2.line(line_image, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 255, 255), 2)
-
-
-        for line in horizontal_lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(rgb_image_with_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.line(rgb_image_with_lines, (vertical_line[0], vertical_line[1]), (vertical_line[2], vertical_line[3]), (255, 0, 0), 2)
+        # Create a figure and a 1x2 grid of subplots
+        fig, axs = plt.subplots(1, 2)
 
         
-        plt.subplot(1, 3, 1)
-        plt.imshow(rgb_image)
-        plt.title('Original RGB Image')
+        # Draw a rectangle on the original image to indicate the zoomed area
+        # Define the size of the rectangle
+        rect_width = 70
+        rect_height = 90
 
-        # Display the image with the lines
-        plt.subplot(1, 3, 2)
-        plt.imshow(line_image, cmap='gray')
-        plt.title('Image with Lines')
+        # Calculate the bottom left corner of the rectangle
+        rect_x = center_x - rect_width // 2
+        rect_y = center_y - rect_height // 2
 
-        # Display the RGB image with the lines
-        plt.subplot(1, 3, 3)
-        plt.imshow(rgb_image_with_lines)
-        plt.title('RGB Image with Lines')
+        # Create the rectangle
+        rect = patches.Rectangle((rect_x, rect_y), rect_width, rect_height, linewidth=1, edgecolor='r', facecolor='none')
+        axs[0].add_patch(rect)
+        axs[0].set_xticks([])  # Remove x-axis ticks
+        axs[0].set_yticks([])
+
+        # Plot the original image on the first subplot
+        axs[0].imshow(rgb_image, cmap='gray')
+
+
+        # Your existing code for the zoomed image and stippled line
+        zoomed_line_x = [self.line[0] - (center_x-10), self.line[2] - (center_x-10)]
+        zoomed_line_y = [self.line[1] - (center_y-10), self.line[3] - (center_y-10)]
+        zoomed_line_x = [max(min(x, 50), 0) for x in zoomed_line_x]
+        zoomed_line_y = [max(min(y, 50), 0) for y in zoomed_line_y]
+        axs[1].set_xticks([])  # Remove x-axis ticks
+        axs[1].set_yticks([])
+        axs[1].imshow(zoomed_image, cmap='gray')
+        axs[1].plot(zoomed_line_x, zoomed_line_y, 'r--')
+
+        # Display the figure
+        plt.show()
+        
+    def plot_edge_fwhm(self):
         """
-        # Display the image with the lines
-        plt.subplot(1, 3, 1)
-        plt.imshow(self.cube.sel(bands=64).values, cmap='gray')
-        plt.title('Band 64, Initial fwhm:  1.4294294294294296')
-
-        plt.subplot(1, 3, 2)
-        plt.imshow(self.cube.sel(bands=65).values, cmap='gray')
-        plt.title('Original RGB Image: Initial fwhm:  0.8108108108108114')
-
-        # Display the image with the lines
-        plt.subplot(1, 3, 3)
-        plt.imshow(self.cube.sel(bands=69).values, cmap='gray')
-        plt.title('Image with Lines, Initial fwhm:  0.24024024024024015')
+            Plotting the found FWHM values from the ESF. 
         """
+        plt.plot(self.wavelengths, self.final_fwhm)
+        plt.xlabel('Wavelength (nm)')
+        plt.ylabel('FWHM spatial pixels')
 
         plt.show()
+    def plot_edge_fwhm(self):
+        """
+            Plotting the found FWHM values from the ESF. 
+        """
+        plt.plot(self.wavelengths, self.initial_fwhm)
+        plt.xlabel('Wavelength (nm)')
+        plt.ylabel('FWHM spatial pixels')
 
+        plt.show()
 
     def parabole_func(self):
         bands = self.bands
