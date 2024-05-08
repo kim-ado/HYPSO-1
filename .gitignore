@@ -2,6 +2,7 @@ open-code/
 data/
 images/
 hico_data
+.conda/
 .ipynb_checkpoints/
 *.html
 *.jpg
