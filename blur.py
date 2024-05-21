@@ -33,72 +33,52 @@ class blurCube():
         self.edge = None
 
         self.folder_name = "hico_data/downloaded_data"
+        self.filefolder = "/home/kimado/master/DIP-HyperKite/datasets/hico"
+
         self.patch_size = 170
 
     def blur_cubes(self):
 
-        self.blur_cube()
+        self.final_sigma =  [1.2071679687499999, 1.1487695312499997, 1.11373046875, 1.06701171875, 1.0436523437499998, 1.0086132812499997, 0.9735742187499998, 0.95021484375, 0.9268554687499999, 0.88013671875, 0.86845703125, 0.8450976562499999, 0.82173828125, 0.7866992187499999, 0.73998046875, 0.73998046875, 0.73998046875, 0.6932617187499999, 0.65822265625, 0.6348632812499999, 0.6231835937499999, 0.6115039062500001, 0.59982421875, 0.57646484375, 0.5647851562499999, 0.5531054687499999, 0.5414257812500001, 0.52974609375, 0.51806640625, 0.50638671875, 0.49470703124999993, 0.48302734375, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.45966796874999993, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.41294921875, 0.41294921875, 0.42462890624999994, 0.41294921875, 0.42462890624999994, 0.42462890624999994, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.44798828125, 0.45966796874999993, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.48302734375, 0.49470703124999993, 0.51806640625, 0.51806640625, 0.5414257812500001, 0.5531054687499999, 0.5647851562499999, 0.58814453125, 0.6115039062500001, 0.64654296875, 0.65822265625, 0.68158203125, 0.7049414062499999, 0.72830078125, 0.7633398437499999, 0.7750195312499999, 0.81005859375, 0.8334179687499998, 0.8567773437499999, 0.89181640625, 0.9151757812499999, 0.95021484375, 0.9852539062499999, 1.0086132812499997, 1.0436523437499998, 1.06701171875, 1.10205078125, 1.1370898437499997, 1.1721289062499998, 1.2071679687499999]
 
         self.get_cubes()
 
-        for paths in self.paths_to_nc:
-            self.path_to_nc = paths
+        for path in self.paths_to_nc:
+            self.path_to_nc = path
+            print("path:", path)
             self.read_cube()
-            self.blurred_cube = xr.DataArray(
-                data=np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values),
-                coords=self.cube.isel(bands=slice(self.mbi, self.sbi)).coords,
-                dims=self.cube.isel(bands=slice(self.mbi, self.sbi)).dims
-            )
 
-            for i in range(self.mbi, self.sbi):
-                self.blurred_cube.loc[dict(bands=i-self.mbi)] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
+            self.blurred_cube = np.zeros_like(self.cube)
 
+            for i in range(self.cube.shape[0]):
+                self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (0,0), sigmaX=self.final_sigma[i])
 
-    def divide_into_patches(self, cube, bandindex):
-        """
-            Divide the blurred cube into patches of size patch_size.
-        """
-        from scipy.io import savemat
+            self.divide_into_patches(self.blurred_cube)
 
-        ref = self.cube.sel(bands=bandindex).values
-
-        pan = cube.sel(bands=44).values
-
-        count = 1
-        for i in range(0, cube.shape[1], self.patch_size):
-            for j in range(0, cube.shape[2], self.patch_size):
-                patch = cube[:, i:i+self.patch_size, j:j+self.patch_size]
-                
-                # Create a folder for each patch
-                folder_name = f'hico_{str(count).zfill(2)}'
-                file_name = os.path.join('hico', folder_name)
-                if not os.path.exists(file_name):
-                    os.makedirs(file_name)
-                
-                savemat(os.path.join(file_name, f'pavia_{str(count).zfill(2)}.mat'), {'ref': ref, 'downsampled': downsampled, 'pan': pan})                
-                count += 1
 
     def blur_cube(self):
+        self.get_cube()
+
+        self.read_cube()
 
         self.parabole_func()
+
+        self.line = [110, 830, 110, 823]
         
         for i in range(self.mbi, self.sbi):
             
             lower = 0.01
-            upper = 3.00
+            upper = 2.00
             epsilon = 0.02
 
-            self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=i).values, self.line)
+            self.edge = self.convert_coordinates_to_intensity_values(self.cube[i], self.line)
             fwhm = self.get_fwhm_val(self.edge)
             self.initial_fwhm.append(fwhm)
             
             self.current_fwhm.append(fwhm)
-            self.blurred_cube = xr.DataArray(
-                data=np.zeros_like(self.cube.isel(bands=slice(self.mbi, self.sbi)).values),
-                coords=self.cube.isel(bands=slice(self.mbi, self.sbi)).coords,
-                dims=self.cube.isel(bands=slice(self.mbi, self.sbi)).dims
-            )
+            self.blurred_cube = np.zeros_like(self.cube)
 
+            # Rewrite this code later
             while upper - lower > epsilon:
                 middle = (lower + upper) / 2
                 blurred_band = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=middle)
@@ -115,7 +95,50 @@ class blurCube():
             final_sigma = (lower + upper) / 2
             self.sigma_values.append(final_sigma)
             self.blurred_cube.loc[dict(bands=i-self.mbi)] = cv2.GaussianBlur(self.cube.sel(bands=i).values, (0,0), sigmaX=self.sigma_values[i-self.mbi])
-            self.final_fwhm.append(self.get_fwhm_val(self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-self.mbi).values, self.line)))
+            #self.final_fwhm.append(self.get_fwhm_val(self.convert_coordinates_to_intensity_values(self.blurred_cube.isel(bands=i-self.mbi).values, self.line)))
+
+
+        print("Initial cube min:", self.cube.values.min(), "\n Initial cube max:", self.cube.values.max(), "\n")
+        print("Blurred cube min:", self.blurred_cube.values.min(), "\nBlurred cube max:", self.blurred_cube.values.max(),"\n")
+        self.blurred_cube = self.blurred_cube.transpose()
+        print("Transposed the cube", self.blurred_cube.shape)
+        self.visualize_blurred_cube()
+        self.foldername = os.path.basename(self.path_to_nc)
+        file_folder = os.path.join(self.filefolder, self.foldername)
+        if not os.path.exists(file_folder):
+            os.makedirs(file_folder)
+            
+        #self.divide_into_patches(self.blurred_cube)
+
+    def divide_into_patches(self, blurred_cube):
+        """
+            Divide the blurred cube into patches of size patch_size.
+        """
+        from scipy.io import savemat
+
+        ref = self.cube[:,:,self.mbi:self.sbi]
+
+        sharpest_image = blurred_cube[44]
+
+        count = 1
+        for i in range(0, blurred_cube.shape[1], self.patch_size):
+            for j in range(0, blurred_cube.shape[2], self.patch_size):
+
+                blurred_patch = blurred_cube[:, i:i+self.patch_size, j:j+self.patch_size]
+                ref_patch = ref[:, i:i+self.patch_size, j:j+self.patch_size]
+                sharpest_image_patch = sharpest_image[i:i+self.patch_size, j:j+self.patch_size]
+                
+                # Create a folder for each patch
+                base_name = os.path.basename(self.path_to_nc)
+                folder_name = f'{base_name}_{str(count).zfill(2)}'
+                file_folder = os.path.join(self.filefolder, base_name)
+                file_name = os.path.join(file_folder, folder_name)
+                if not os.path.exists(file_name):
+                    os.makedirs(file_name)
+                
+                savemat(os.path.join(file_name, f'{folder_name}.mat'), {'ref': ref_patch, 'blurred': blurred_patch, 'sharpest_image': sharpest_image_patch})                
+                count += 1
+
 
     def get_cubes(self):
         """Get the raw data from the folder.
@@ -123,19 +146,14 @@ class blurCube():
         Returns:
             list: The list of paths to the raw data files.
         """
-        # Initialize an empty list to store the paths to the .nc files
         self.paths_to_nc = []
 
-        # Find files ending in .nc
         for i, file in enumerate(os.listdir(self.folder_name)):
-            if i == 0:
+            if file == "edge_image.nc":
                 continue
             if file.endswith(".nc"):
-                # Append the path to the .nc file to the list
                 self.paths_to_nc.append(os.path.join(self.folder_name, file))
-                print("File accessed: ", os.path.join(self.folder_name, file))
 
-        # Return the list of paths to the .nc files
         return self.paths_to_nc
 
     def get_cube(self):
@@ -144,7 +162,6 @@ class blurCube():
         Returns:
             np.ndarray: The raw data.
         """
-        # find file ending in .nc
         for file in os.listdir(self.folder_name):
             if file == "edge_image.nc":
             #if file.endswith(".L1B_ISS"):
@@ -160,13 +177,10 @@ class blurCube():
         #f = nc.Dataset(self.path_to_nc, 'r')
         #ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf', phony_dims='access')
         ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
-        print(ds.variables)
         Lt = ds['Lt']
-        print(Lt)
 
         # Only need to do this once
-        if self.wavelengths == 0:
-            self.wavelengths = Lt.attrs['wavelengths']
+        self.wavelengths = Lt.attrs['wavelengths']
 
         slope = 0.02  # The slope value mentioned in the documentation
         Lt_corrected = Lt * slope
@@ -174,41 +188,31 @@ class blurCube():
         self.bands = len(self.wavelengths[self.mbi:self.sbi] - 1 )
         self.wavelengths = self.wavelengths[self.mbi:self.sbi]
         
-        self.cube = Lt_corrected[:, :500, :1870:]
-        
+        self.cube = Lt_corrected[:1870, :510, self.mbi:self.sbi].values.transpose(2, 0, 1) # to make the patches work
 
-    def detect_sharpest_edge(self, image):
-        """
-            Detect the sharpest edge of the image.
-        """
-        image = self.cube.sel(bands=96).values
-        image = image - np.min(image)  # Shift the range so that it starts from 0
-        image = image / np.max(image)  # Normalize to the range [0, 1]
-        image = (image * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
+    def visualize_blurred_cube(self):
 
-        edges = cv2.Canny(image, 50, 150, apertureSize=3)
+        R = self.blurred_cube.sel(bands=42-9)
+        G = self.blurred_cube.sel(bands=27-9)
+        B = self.blurred_cube.sel(bands=11-9)
 
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=10, maxLineGap=250)
-        
-        self.line = [214, 701, 214, 692] # Manuel coordinates for a line crossing a sharo edge, only need to do this once
-        
-        # Get the pixel intensity values along the vertical line
-        self.edge = self.convert_coordinates_to_intensity_values(self.cube.sel(bands=96).values, self.line)
+        R = (R - R.min()) / (R.max() - R.min())
+        G = (G - G.min()) / (G.max() - G.min())
+        B = (B - B.min()) / (B.max() - B.min())
 
-        print("Edge:", self.edge)
+        # Stack the R, G, B bands to create a 3D array (image)
+        rgb_image = np.dstack((R, G, B))
+
+        plt.imshow(rgb_image)
+        plt.show()
         
 
     def visualize_cube(self):
 
-        # Assuming 'cube' is your xarray Dataset
         R = self.cube.sel(bands=42).values
         G = self.cube.sel(bands=27).values
         B = self.cube.sel(bands=11).values
 
-        self.line = [110, 830, 110, 823]
-
-
-        # Normalize to [0, 1]
         R = (R - R.min()) / (R.max() - R.min())
         G = (G - G.min()) / (G.max() - G.min())
         B = (B - B.min()) / (B.max() - B.min())
@@ -227,26 +231,19 @@ class blurCube():
         image = image / np.max(image)  # Normalize to the range [0, 1]
         image = (image * 255).astype(np.uint8)  # Scale to the range [0, 255] and convert to 8-bit integers
 
-        # Your existing code
         self.line = [110, 830, 110, 823]
         center_x = self.line[0] + (self.line[2] - self.line[0]) // 2
         center_y = self.line[1] + (self.line[3] - self.line[1]) // 2
         zoomed_image = rgb_image[center_y-10:center_y+10, center_x-10:center_x+10]
 
-        # Create a figure and a 1x2 grid of subplots
         fig, axs = plt.subplots(1, 2)
 
-        
-        # Draw a rectangle on the original image to indicate the zoomed area
-        # Define the size of the rectangle
         rect_width = 70
         rect_height = 90
 
-        # Calculate the bottom left corner of the rectangle
         rect_x = center_x - rect_width // 2
         rect_y = center_y - rect_height // 2
 
-        # Create the rectangle
         rect = patches.Rectangle((rect_x, rect_y), rect_width, rect_height, linewidth=1, edgecolor='r', facecolor='none')
         axs[0].add_patch(rect)
         axs[0].set_xticks([])  # Remove x-axis ticks
@@ -256,28 +253,18 @@ class blurCube():
         axs[0].imshow(rgb_image, cmap='gray')
 
 
-        # Your existing code for the zoomed image and stippled line
         zoomed_line_x = [self.line[0] - (center_x-10), self.line[2] - (center_x-10)]
         zoomed_line_y = [self.line[1] - (center_y-10), self.line[3] - (center_y-10)]
         zoomed_line_x = [max(min(x, 50), 0) for x in zoomed_line_x]
         zoomed_line_y = [max(min(y, 50), 0) for y in zoomed_line_y]
-        axs[1].set_xticks([])  # Remove x-axis ticks
+        axs[1].set_xticks([])  
         axs[1].set_yticks([])
         axs[1].imshow(zoomed_image, cmap='gray')
         axs[1].plot(zoomed_line_x, zoomed_line_y, 'r--')
 
-        # Display the figure
         plt.show()
         
-    def plot_edge_fwhm(self):
-        """
-            Plotting the found FWHM values from the ESF. 
-        """
-        plt.plot(self.wavelengths, self.final_fwhm)
-        plt.xlabel('Wavelength (nm)')
-        plt.ylabel('FWHM spatial pixels')
 
-        plt.show()
     def plot_edge_fwhm(self):
         """
             Plotting the found FWHM values from the ESF. 
