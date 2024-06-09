@@ -7,6 +7,7 @@ import scipy.interpolate as si
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 from skimage.measure import profile_line
+import json
 
 class blurCube():
     def __init__(self):
@@ -32,14 +33,28 @@ class blurCube():
         self.blurred_cube = []
         self.edge = None
 
-        self.folder_name = "hico_data/downloaded_data"
+        self.folder_name = "hico_data/ref_data"
         self.filefolder = "/home/kimado/master/DIP-HyperKite/datasets/hico"
 
         self.patch_size = 170
 
+    def blur_cubes_classic(self, cubes):
+        self.final_sigma =  [1.2071679687499999, 1.1487695312499997, 1.11373046875, 1.06701171875, 1.0436523437499998, 1.0086132812499997, 0.9735742187499998, 0.95021484375, 0.9268554687499999, 0.88013671875, 0.86845703125, 0.8450976562499999, 0.82173828125, 0.7866992187499999, 0.73998046875, 0.73998046875, 0.73998046875, 0.6932617187499999, 0.65822265625, 0.6348632812499999, 0.6231835937499999, 0.6115039062500001, 0.59982421875, 0.57646484375, 0.5647851562499999, 0.5531054687499999, 0.5414257812500001, 0.52974609375, 0.51806640625, 0.50638671875, 0.49470703124999993, 0.48302734375, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.45966796874999993, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.41294921875, 0.41294921875, 0.42462890624999994, 0.41294921875, 0.42462890624999994, 0.42462890624999994, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.44798828125, 0.45966796874999993, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.48302734375, 0.49470703124999993, 0.51806640625, 0.51806640625, 0.5414257812500001, 0.5531054687499999, 0.5647851562499999, 0.58814453125, 0.6115039062500001, 0.64654296875, 0.65822265625, 0.68158203125, 0.7049414062499999, 0.72830078125, 0.7633398437499999, 0.7750195312499999, 0.81005859375, 0.8334179687499998, 0.8567773437499999, 0.89181640625, 0.9151757812499999, 0.95021484375, 0.9852539062499999, 1.0086132812499997, 1.0436523437499998, 1.06701171875, 1.10205078125, 1.1370898437499997, 1.1721289062499998, 1.2071679687499999]
+        for path in cubes:
+            self.path_to_nc = path
+            self.read_cube()
+            self.blurred_cube = np.zeros_like(self.cube)
+
+            for i in range(self.cube.shape[2]):
+                self.blurred_cube[:,:,i] = cv2.GaussianBlur(self.cube[:,:,i], (0,0), sigmaX=self.final_sigma[i])
+
+            save_path = '/home/kimado/master/HYPSO-1/hico_data/blurred_data'
+            np.save(os.path.join(save_path, os.path.basename(path) + '_blurred.npy'), self.blurred_cube)
+
     def blur_cubes(self):
 
         self.final_sigma =  [1.2071679687499999, 1.1487695312499997, 1.11373046875, 1.06701171875, 1.0436523437499998, 1.0086132812499997, 0.9735742187499998, 0.95021484375, 0.9268554687499999, 0.88013671875, 0.86845703125, 0.8450976562499999, 0.82173828125, 0.7866992187499999, 0.73998046875, 0.73998046875, 0.73998046875, 0.6932617187499999, 0.65822265625, 0.6348632812499999, 0.6231835937499999, 0.6115039062500001, 0.59982421875, 0.57646484375, 0.5647851562499999, 0.5531054687499999, 0.5414257812500001, 0.52974609375, 0.51806640625, 0.50638671875, 0.49470703124999993, 0.48302734375, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.45966796874999993, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.41294921875, 0.41294921875, 0.42462890624999994, 0.41294921875, 0.42462890624999994, 0.42462890624999994, 0.43630859375, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.42462890624999994, 0.44798828125, 0.45966796874999993, 0.47134765624999997, 0.47134765624999997, 0.47134765624999997, 0.48302734375, 0.49470703124999993, 0.51806640625, 0.51806640625, 0.5414257812500001, 0.5531054687499999, 0.5647851562499999, 0.58814453125, 0.6115039062500001, 0.64654296875, 0.65822265625, 0.68158203125, 0.7049414062499999, 0.72830078125, 0.7633398437499999, 0.7750195312499999, 0.81005859375, 0.8334179687499998, 0.8567773437499999, 0.89181640625, 0.9151757812499999, 0.95021484375, 0.9852539062499999, 1.0086132812499997, 1.0436523437499998, 1.06701171875, 1.10205078125, 1.1370898437499997, 1.1721289062499998, 1.2071679687499999]
+        #max_values = {}  # Dictionary to store the maximum values
 
         self.get_cubes()
 
@@ -48,13 +63,19 @@ class blurCube():
             print("path:", path)
             self.read_cube()
 
+            #max_value = float(np.max(self.cube))
+            #max_values[os.path.basename(path)] = max_value
+
             self.blurred_cube = np.zeros_like(self.cube)
 
-            for i in range(self.cube.shape[0]):
-                self.blurred_cube[i] = cv2.GaussianBlur(self.cube[i], (0,0), sigmaX=self.final_sigma[i])
+            for i in range(self.cube.shape[2]):
+                self.blurred_cube[:,:,i] = cv2.GaussianBlur(self.cube[:,:,i], (0,0), sigmaX=self.final_sigma[i])
 
-            self.divide_into_patches(self.blurred_cube)
+            #self.divide_into_patches(self.blurred_cube)
 
+            # Convert the dictionary to a JSON string
+        #json_string = json.dumps(max_values, indent=4)
+        #print(json_string)
 
     def blur_cube(self):
         self.get_cube()
@@ -116,18 +137,17 @@ class blurCube():
         """
         from scipy.io import savemat
 
-        ref = self.cube[:,:,self.mbi:self.sbi]
+        ref = self.cube
 
-        sharpest_image = blurred_cube[44]
+        sharpest_image = blurred_cube[:,:,44]
 
         count = 1
         for i in range(0, blurred_cube.shape[1], self.patch_size):
-            for j in range(0, blurred_cube.shape[2], self.patch_size):
+            for j in range(0, blurred_cube.shape[0], self.patch_size):
 
-                blurred_patch = blurred_cube[:, i:i+self.patch_size, j:j+self.patch_size]
-                ref_patch = ref[:, i:i+self.patch_size, j:j+self.patch_size]
+                blurred_patch = blurred_cube[i:i+self.patch_size, j:j+self.patch_size, :]
+                ref_patch = ref[i:i+self.patch_size, j:j+self.patch_size, :]
                 sharpest_image_patch = sharpest_image[i:i+self.patch_size, j:j+self.patch_size]
-                
                 # Create a folder for each patch
                 base_name = os.path.basename(self.path_to_nc)
                 folder_name = f'{base_name}_{str(count).zfill(2)}'
@@ -172,23 +192,19 @@ class blurCube():
 
         # Data from wavelengths less than 400 nm and greater than 900 nm are not recommended for analysis, but we will use them anyway, we can throw data away if needed, ask sivert
 
-
     def read_cube(self):
         #f = nc.Dataset(self.path_to_nc, 'r')
         #ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf', phony_dims='access')
+
         ds = xr.open_dataset(self.path_to_nc, group='products', engine='h5netcdf')
         Lt = ds['Lt']
 
-        # Only need to do this once
-        self.wavelengths = Lt.attrs['wavelengths']
-
         slope = 0.02  # The slope value mentioned in the documentation
         Lt_corrected = Lt * slope
-
-        self.bands = len(self.wavelengths[self.mbi:self.sbi] - 1 )
-        self.wavelengths = self.wavelengths[self.mbi:self.sbi]
         
-        self.cube = Lt_corrected[:1870, :510, self.mbi:self.sbi].values.transpose(2, 0, 1) # to make the patches work
+        self.cube = Lt_corrected[:1870, :510, 9:96].values # to make the patches work
+
+        
 
     def visualize_blurred_cube(self):
 
@@ -208,16 +224,16 @@ class blurCube():
         
 
     def visualize_cube(self):
-
-        R = self.cube.sel(bands=42).values
-        G = self.cube.sel(bands=27).values
-        B = self.cube.sel(bands=11).values
+        import matplotlib.pyplot as plt
+        import numpy as np
+        R = self.cube[:, :, 42-9]
+        G = self.cube[:, :, 27-9]
+        B = self.cube[:, :, 11-9]
 
         R = (R - R.min()) / (R.max() - R.min())
         G = (G - G.min()) / (G.max() - G.min())
         B = (B - B.min()) / (B.max() - B.min())
 
-        # Stack the R, G, B bands to create a 3D array (image)
         rgb_image = np.dstack((R, G, B))
 
         plt.imshow(rgb_image)
@@ -234,7 +250,7 @@ class blurCube():
         self.line = [110, 830, 110, 823]
         center_x = self.line[0] + (self.line[2] - self.line[0]) // 2
         center_y = self.line[1] + (self.line[3] - self.line[1]) // 2
-        zoomed_image = rgb_image[center_y-10:center_y+10, center_x-10:center_x+10]
+        zoomed_image = image[center_y-10:center_y+10, center_x-10:center_x+10]
 
         fig, axs = plt.subplots(1, 2)
 
@@ -250,7 +266,7 @@ class blurCube():
         axs[0].set_yticks([])
 
         # Plot the original image on the first subplot
-        axs[0].imshow(rgb_image, cmap='gray')
+        axs[0].imshow(image, cmap='gray')
 
 
         zoomed_line_x = [self.line[0] - (center_x-10), self.line[2] - (center_x-10)]
