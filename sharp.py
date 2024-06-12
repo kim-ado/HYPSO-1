@@ -202,6 +202,7 @@ def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) ->
     if sharpest_band_index is None:
         sharpest_band_index = image.shape[2] // 2
 
+    image = image.astype(np.float64)
     # Do PCA on image
     # inspo: https://stats.stackexchange.com/questions/134282/relationship-between-svd-and-pca-how-to-use-svd-to-perform-pca
     # Reshape image to 2D array with each row representing samples

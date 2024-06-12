@@ -49,7 +49,7 @@ class blurCube():
                 self.blurred_cube[:,:,i] = cv2.GaussianBlur(self.cube[:,:,i], (0,0), sigmaX=self.final_sigma[i])
 
             save_path = '/home/kimado/master/HYPSO-1/hico_data/blurred_data'
-            np.save(os.path.join(save_path, os.path.basename(path) + '_blurred.npy'), self.blurred_cube)
+            np.savez(os.path.join(save_path, os.path.basename(path) + '_blurred.npz'), original_cube=self.cube, blurred_cube=self.blurred_cube)
 
     def blur_cubes(self):
 
