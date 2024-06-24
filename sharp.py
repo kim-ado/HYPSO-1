@@ -202,34 +202,43 @@ def component_subtitution(image: np.ndarray, sharpest_band_index: int = None) ->
     if sharpest_band_index is None:
         sharpest_band_index = image.shape[2] // 2
 
-    image = image.astype(np.float64)
-    # Do PCA on image
-    # inspo: https://stats.stackexchange.com/questions/134282/relationship-between-svd-and-pca-how-to-use-svd-to-perform-pca
-    # Reshape image to 2D array with each row representing samples
+    # Standardize the data
+    mean_image = np.mean(image, axis=(0, 1))
+    std_image = np.std(image, axis=(0, 1))
+    standardized_image = (image - mean_image) / std_image
+
+    # Do PCA on standardized image
     img_variable_form = np.reshape(
-        image, (image.shape[0] * image.shape[1], image.shape[2]))
+        standardized_image, (standardized_image.shape[0] * standardized_image.shape[1], standardized_image.shape[2]))
+    
     U, S, Vh = svd(img_variable_form, full_matrices=False)
     principal_components = np.dot(U, np.diag(S))
     component_cube = np.reshape(
-        principal_components, (image.shape[0], image.shape[1], image.shape[2]))
+        principal_components, (standardized_image.shape[0], standardized_image.shape[1], standardized_image.shape[2]))
 
-    # Match histogram of sharpest band to first component
+    # Standardize the sharpest band
+    sharpest_band = (image[:, :, sharpest_band_index] - mean_image[sharpest_band_index]) / std_image[sharpest_band_index]
+
+    # Match histogram of standardized sharpest band to first component
     matched_sharpest_band = match_histograms(
-        image[:, :, sharpest_band_index], component_cube[:, :, 0])
+        sharpest_band, component_cube[:, :, 0])
 
     # Replace first component with matched sharpest band
-    fixed_component_cube = component_cube
+    fixed_component_cube = np.copy(component_cube)
     fixed_component_cube[:, :, 0] = matched_sharpest_band
     fixed_cc_variable_form = np.reshape(
-        fixed_component_cube, (image.shape[0] * image.shape[1], image.shape[2]))
+        fixed_component_cube, (standardized_image.shape[0] * standardized_image.shape[1], standardized_image.shape[2]))
 
     # Do inverse PCA
     sharpend_variable_form = np.dot(fixed_cc_variable_form, Vh)
+
+    # Reverse the standardization
+    sharpend_variable_form = sharpend_variable_form * std_image + mean_image
+
     sharpend_cube = np.reshape(
         sharpend_variable_form, (image.shape[0], image.shape[1], image.shape[2]))
 
     return sharpend_cube
-
 
 def wavelet_sharpen(base_image: np.ndarray,
                     reference_image: np.ndarray,
@@ -251,23 +260,23 @@ def wavelet_sharpen(base_image: np.ndarray,
     """
     import pywt
 
-    # Perform wavelet transform on base image
+    # Ensure the input images are float32
+    base_image = base_image.astype(np.float32)
+    reference_image = reference_image.astype(np.float32)
+    
+    # Perform wavelet transform on base and reference images
     base_coeffs = pywt.wavedec2(base_image, wavelet, level=level)
-
-    # Perform wavelet transform on reference image
     reference_coeffs = pywt.wavedec2(reference_image, wavelet, level=level)
 
-    # Replace base image coefficients with reference image coefficients
-    sharpened_coeffs = reference_coeffs
-    sharpened_coeffs[0] = base_coeffs[0]
+    # Replace detail coefficients with those from the reference image
+    sharpened_coeffs = list(base_coeffs)
+    for i in range(1, len(sharpened_coeffs)):
+        sharpened_coeffs[i] = reference_coeffs[i]
 
-    # Perform inverse wavelet transform
-    sharpened_image = pywt.waverec2(sharpened_coeffs, wavelet)
+    # Perform inverse wavelet transform and ensure output is float32
+    sharpened_image = pywt.waverec2(sharpened_coeffs, wavelet).astype(np.float32)
 
-    if provide_coeffs:
-        return sharpened_image, base_coeffs, reference_coeffs
-    else:
-        return sharpened_image
+    return sharpened_image
 
 
 class SharpeningAlg:
